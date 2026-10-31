@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alcedo-lit"
+dynamic = ["version"]
+description = "Collect DOIs from a list of literature search queries, grouped by query."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+authors = [{ name = "Alcedo contributors" }]
+keywords = ["literature search", "doi", "bibliometrics", "systematic review", "openalex", "google scholar"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "requests>=2.31",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+# Experimental direct Google Scholar access. scholarly 1.7.11 imports a module that
+# bibtexparser 2 removed, and passes an argument to httpx.Client that httpx 0.28 removed.
+scholar = [
+    "scholarly>=1.7.11",
+    "bibtexparser<2",
+    "httpx<0.28",
+]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+alcedo = "alcedo_lit.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "alcedo_lit.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

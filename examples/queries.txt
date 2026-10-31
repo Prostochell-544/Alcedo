@@ -1,0 +1,4 @@
+biomimetic nacre ("brick-and-mortar" OR "layered structure") composite fracture toughness;
+mussel-inspired polydopamine "wet adhesion" -dental -periodontal;
+gecko-inspired dry adhesive (micropillar OR "hierarchical microstructure") adhesion;
+bioinspired superhydrophobic surface "lotus effect" self-cleaning;
