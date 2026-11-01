@@ -19,10 +19,13 @@ venv/
 .idea/
 .vscode/
 
-# Your own research stays private: queries and results in the project root are never committed.
-# Public examples live in examples/.
-/queries*.txt
+# Your own research stays private: keep it in private/. Other result files are ignored too.
+# The sample in the project root is public: queries.txt, alcedo_results.txt, alcedo_results_unique.csv.
+/private/
+/results/
+/grouped_dois*.txt
 /*results*.txt
 /*results*.csv
-/grouped_dois*.txt
-/results/
+/*_unique.csv
+!/alcedo_results.txt
+!/alcedo_results_unique.csv

@@ -7,14 +7,17 @@ import os
 import sys
 from pathlib import Path
 
-from . import __version__
+from . import __version__, setup_wizard
+from .config import load_config
 from .pipeline import run
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    config = load_config()
     p = argparse.ArgumentParser(
         prog="alcedo",
-        description="Collect DOIs from a list of literature search queries, grouped by query.",
+        description="Collect DOIs from a list of literature search queries, grouped by query. "
+                    "To set up API keys and see the search options, run: alcedo setup",
     )
     p.add_argument("--version", action="version", version=f"alcedo {__version__}")
     p.add_argument("-i", "--input", type=Path, default=Path("queries.txt"),
@@ -25,14 +28,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="how many result pages of 10 to take per query; "
                         "takes them all if there are fewer (default: 5)")
     p.add_argument("--source", choices=("auto", "scholar", "openalex"), default="auto",
-                   help="auto: Google Scholar if a SerpApi key or --direct-scholar is given, falling back to "
-                        "OpenAlex; otherwise OpenAlex. scholar: Scholar only. openalex: OpenAlex only (default: auto)")
-    p.add_argument("--serpapi-key", default=os.environ.get("SERPAPI_KEY"),
-                   help="SerpApi key for Google Scholar results (default: SERPAPI_KEY variable)")
-    p.add_argument("--openalex-key", default=os.environ.get("OPENALEX_API_KEY"),
+                   help="auto: a search API, otherwise Semantic Scholar, OpenAlex and direct Scholar if you turned "
+                        "it on. scholar: Google Scholar only. openalex: OpenAlex only (default: auto)")
+    p.add_argument("--searchapi-key", default=os.environ.get("SEARCHAPI_KEY") or config.get("searchapi_key"),
+                   help="SearchApi key for Google Scholar results (default: SEARCHAPI_KEY variable or alcedo setup)")
+    p.add_argument("--serper-key", default=os.environ.get("SERPER_API_KEY") or config.get("serper_key"),
+                   help="Serper key for Google Scholar results (default: SERPER_API_KEY variable or alcedo setup)")
+    p.add_argument("--serpapi-key", default=os.environ.get("SERPAPI_KEY") or config.get("serpapi_key"),
+                   help="SerpApi key for Google Scholar results (default: SERPAPI_KEY variable or alcedo setup)")
+    p.add_argument("--openalex-key", default=os.environ.get("OPENALEX_API_KEY") or config.get("openalex_key"),
                    help="free OpenAlex API key; without one the daily budget is much smaller and shared per IP "
-                        "(default: OPENALEX_API_KEY variable)")
-    p.add_argument("--mailto", help="your e-mail, sent to Crossref, OpenAlex and Europe PMC to identify your requests")
+                        "(default: OPENALEX_API_KEY variable or alcedo setup)")
+    p.add_argument("--semantic-scholar-key",
+                   default=os.environ.get("SEMANTIC_SCHOLAR_API_KEY") or config.get("semantic_scholar_key"),
+                   help="free Semantic Scholar API key; without one all users share a limit "
+                        "(default: SEMANTIC_SCHOLAR_API_KEY variable or alcedo setup)")
+    p.add_argument("--semantic-scholar", action=argparse.BooleanOptionalAction, default=True,
+                   help="use Semantic Scholar among the free sources (default: yes)")
+    p.add_argument("--mailto", help="your e-mail, sent to Crossref, OpenAlex, Semantic Scholar and Europe PMC "
+                                    "to identify your requests")
     p.add_argument("--no-page-meta", dest="page_meta", action="store_false",
                    help="do not open publisher pages when looking for a DOI")
     p.add_argument("--no-title-search", dest="title_search", action="store_false",
@@ -40,29 +54,44 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--resume", action="store_true",
                    help="skip queries already collected in the results file")
     p.add_argument("--redo-openalex", action="store_true",
-                   help="like --resume, but also collect OpenAlex blocks again, for example after "
-                        "the SerpApi quota renews")
+                   help="like --resume, but also collect blocks from the free sources again, "
+                        "for example after adding an API key")
     p.add_argument("--overwrite", action="store_true",
                    help="replace an existing results file and collect everything again")
+    p.add_argument("--verify-dois", action="store_true",
+                   help="check every DOI in the doi.org registry and mark the ones that do not exist")
     p.add_argument("--max-failures", type=int, default=2,
-                   help="stop asking Google Scholar after this many failures in a row (default: 2)")
+                   help="stop using a Google Scholar source after this many failures in a row (default: 2)")
     p.add_argument("--page-timeout", type=float, default=120,
                    help="hard timeout for one page of Google Scholar results, in seconds (default: 120)")
     p.add_argument("--http-timeout", type=float, default=15,
                    help="timeout for publisher and API requests, in seconds (default: 15)")
 
-    direct = p.add_argument_group("experimental direct Google Scholar access",
-                                  'needs: pip install "alcedo-lit[scholar]"; at your own risk')
-    direct.add_argument("--direct-scholar", action="store_true",
-                        help="query Google Scholar directly through scholarly when there is no SerpApi key")
+    direct = p.add_argument_group("direct Google Scholar search",
+                                  'free but unreliable; needs: pip install "alcedo-lit[scholar]"')
+    direct.add_argument("--direct-scholar", action=argparse.BooleanOptionalAction, default=config.get("direct_scholar"),
+                        help="add direct search to the free sources when no API answers "
+                             "(default: your choice in alcedo setup)")
     direct.add_argument("--delay", type=float, default=25,
                         help="pause between direct Scholar queries, in seconds (default: 25)")
     direct.add_argument("--proxy", help="HTTP(S) proxy of your network for direct Scholar access")
 
+    p.set_defaults(direct_warning_shown=bool(config.get("direct_scholar")))  # whoever agreed has read it
     args = p.parse_args(argv)
     if args.pages < 1:
         p.error("--pages must be at least 1")
     return args
+
+
+def decide_direct_search(args: argparse.Namespace) -> None:
+    """Ask once whether to use direct search, the first time it would matter. Never ask without a terminal."""
+    if args.direct_scholar is not None:
+        return
+    args.direct_scholar = False
+    has_api = args.searchapi_key or args.serper_key or args.serpapi_key
+    if args.source != "openalex" and not has_api and setup_wizard.is_terminal():
+        args.direct_scholar = setup_wizard.ask_direct_choice(load_config())
+        args.direct_warning_shown = True
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -71,4 +100,9 @@ def main(argv: list[str] | None = None) -> int:
             stream.reconfigure(errors="replace")
         except Exception:
             pass
-    return run(parse_args(argv))
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["setup"]:
+        return setup_wizard.run_setup()
+    args = parse_args(argv)
+    decide_direct_search(args)
+    return run(args)

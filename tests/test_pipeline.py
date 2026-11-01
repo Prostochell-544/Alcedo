@@ -45,7 +45,7 @@ def project(tmp_path, monkeypatch):
 
 
 def alcedo(*args):
-    return cli.main(["--no-page-meta", "--no-title-search", *args])
+    return cli.main(["--no-page-meta", "--no-title-search", "--no-semantic-scholar", *args])
 
 
 def test_default_without_keys_uses_openalex_and_never_touches_scholar(project):
@@ -60,20 +60,26 @@ def test_source_scholar_without_a_backend_is_refused(project):
     assert project["scholar"] == []
 
 
-def test_direct_scholar_warns_and_falls_back(project, capsys):
+def test_direct_scholar_warns_and_adds_to_openalex(project, capsys):
     assert alcedo("--direct-scholar") == 0
     assert "robots.txt" in capsys.readouterr().err
     assert project["scholar"] == [Q_FULL, Q_PARTIAL, Q_DEAD]  # off after 2 failures in a row
+    assert project["openalex"] == [Q_FULL, Q_PARTIAL, Q_DEAD, Q_AFTER, Q_LAST]
     assert project["pauses"] == 2
 
     blocks = blocks_of(project["results"])
-    assert len(dois_in(blocks[Q_FULL])) == 12
-    assert not blocks[Q_FULL][0].startswith("Source:")
+    assert "OpenAlex (50) + Google Scholar (direct) (12 new of 12)" in blocks[Q_FULL][0]
+    assert "the direct list may be incomplete" in blocks[Q_FULL][0]
+    assert len(dois_in(blocks[Q_FULL])) == 62
+    assert "/q1." in blocks[Q_FULL][1]  # OpenAlex comes first
 
+    # Direct search failed after 20 results. Those it found stay, and 16-20 are already in OpenAlex.
     partial = blocks[Q_PARTIAL]
-    assert "Google Scholar (20) + OpenAlex (30)" in partial[0]
-    assert len(dois_in(partial)) == len(set(dois_in(partial))) == 50
+    assert "OpenAlex (50) + Google Scholar (direct) (15 new of 20)" in partial[0]
+    assert "Google Scholar unavailable" in partial[0]
+    assert len(dois_in(partial)) == len(set(dois_in(partial))) == 65
 
+    assert blocks[Q_DEAD][0].startswith("Source: OpenAlex (50) - ")
     assert "Google Scholar unavailable" in blocks[Q_DEAD][0]
     assert "Google Scholar off (failures in a row: 2)" in blocks[Q_AFTER][0]
 
@@ -97,6 +103,8 @@ def test_source_scholar_stops_after_failures_and_never_uses_openalex(project):
     assert project["openalex"] == []
     blocks = blocks_of(project["results"])
     assert list(blocks) == [Q_FULL, Q_PARTIAL, Q_DEAD]
+    assert "may be incomplete" in blocks[Q_FULL][0]
+    assert len(dois_in(blocks[Q_FULL])) == 12
     assert len(dois_in(blocks[Q_PARTIAL])) == 20
     assert any("remaining pages not collected" in line for line in blocks[Q_PARTIAL])
 
@@ -143,7 +151,7 @@ def test_quota_running_out_tops_up_from_openalex_and_stops_searching(serp):
     blocks = blocks_of(serp["results"])
     assert "(20) + OpenAlex (30)" in blocks[Q_PARTIAL][0]
     assert "run out of searches" in blocks[Q_PARTIAL][0]
-    assert "SerpApi off (limit reached)" in blocks[Q_DEAD][0]
+    assert "SerpApi off (Your account has run out of searches.)" in blocks[Q_DEAD][0]
 
 
 def test_redo_openalex_collects_those_blocks_through_serpapi(serp):
@@ -227,7 +235,7 @@ def test_failed_lookups_are_reported_in_the_summary(project, monkeypatch, capsys
 
     monkeypatch.setattr(openalex, "search_openalex", lambda query, args: ([{"title": query}], None))
     monkeypatch.setattr(SESSION, "get", no_network)
-    assert cli.main(["--no-page-meta"]) == 0
+    assert cli.main(["--no-page-meta", "--no-semantic-scholar"]) == 0
     assert "Failed DOI lookups (Crossref: 5, OpenAlex: 5)" in capsys.readouterr().out
 
 

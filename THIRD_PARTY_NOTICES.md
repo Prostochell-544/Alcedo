@@ -9,6 +9,20 @@ that has to be preserved.
 
 Projects whose ideas informed Alcedo's design are listed in `docs/ROADMAP.md`.
 
+## Logo
+
+`docs/assets/alcedo-logo.png` was drawn by [kesha_xdd](https://t.me/kesha_xdd). All rights stay with the artist, who
+allowed its use for this project. It is not covered by the MIT license of the code, so forks and other projects need
+the artist's own permission to use it.
+
+## Wordmark
+
+`docs/assets/alcedo-wordmark-light.svg` and `alcedo-wordmark-dark.svg` show text set in Orbitron and converted to
+outlines. The repository does not contain the font itself.
+
+Orbitron: Copyright 2018 The Orbitron Project Authors (https://github.com/theleagueof/orbitron), with Reserved Font
+Name "Orbitron". Licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
+
 ## Runtime dependencies
 
 These are installed separately and are not distributed with Alcedo.

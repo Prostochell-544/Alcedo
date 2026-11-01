@@ -17,7 +17,7 @@ DOI_RE = re.compile(r"10\.\d{4,9}/(?:\(sici\)[^\s\"']+|[^\s\"'<>]+)", re.IGNOREC
 DOI_TAIL_RE = re.compile(
     r"(?:/(?:full|abstract|abs|pdf|epdf|pdfdirect|pdfft|meta|html|fulltext|summary|"
     r"references|figures|tables|suppl|download|view|citedby))+$"
-    r"|(?:\.(?:pdf|html?|full|abstract))+$",
+    r"|(?:\.(?:pdf|html?|full|short|long|extract|abstract))+$",
     re.IGNORECASE,
 )
 _BRACKETS = {")": "(", "]": "[", "}": "{"}
@@ -45,7 +45,11 @@ def exact_doi(text: str | None) -> str | None:
 
 def doi_url(doi: str) -> str:
     """Return a valid link for a DOI, encoding characters such as the angle brackets of SICI DOIs."""
-    return "https://doi.org/" + quote(doi, safe="/:;(),")
+    return "https://doi.org/" + encode_doi(doi)
+
+
+def encode_doi(doi: str) -> str:
+    return quote(doi, safe="/:;(),")
 
 
 def clean_doi(raw: str) -> str | None:

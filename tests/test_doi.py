@@ -24,6 +24,12 @@ SICI = "10.1002/(SICI)1097-4636(199709)36:3<321::AID-JBM6>3.0.CO;2-O"
     ("https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0123456&type=printable",
      "10.1371/journal.pone.0123456"),
     ("https://www.biorxiv.org/content/10.1101/2020.03.22.002386v1.full.pdf", "10.1101/2020.03.22.002386"),
+    ("https://bioone.org/journals/ardea/volume-109/issue-1/arde.v109i1.a2/title/10.5253/arde.v109i1.a2.short",
+     "10.5253/arde.v109i1.a2"),
+    ("https://bioone.org/journalArticle/Download?urlid=10.13157%2Farla.73.1.2026.ra4.short",
+     "10.13157/arla.73.1.2026.ra4"),
+    ("https://example.org/content/10.1234/abc.long", "10.1234/abc"),
+    ("https://example.org/content/10.1234/abc.extract", "10.1234/abc"),
     ("https://doi.org/10.1016/S0006-3495(20)30001-1", "10.1016/S0006-3495(20)30001-1"),
     ("https://www.tandfonline.com/doi/full/10.1080%2F07391102.2020.1234567", "10.1080/07391102.2020.1234567"),
     ("https://arxiv.org/abs/2101.01234v2", "10.48550/arXiv.2101.01234"),
@@ -38,7 +44,8 @@ def test_doi_from_url(url, expected):
     assert (extract_doi(url) or doi_from_url_pattern(url)) == expected
 
 
-@pytest.mark.parametrize("doi", ["10.5555/meta", "10.1234/report.full", "10.1000/abc&def", "10.1101/gr.123456v2", SICI])
+@pytest.mark.parametrize("doi", ["10.5555/meta", "10.1234/report.full", "10.1234/report.short", "10.1000/abc&def",
+                                 "10.1101/gr.123456v2", SICI])
 def test_a_whole_doi_is_never_trimmed(doi):
     assert exact_doi(doi) == doi
     assert exact_doi(f"https://doi.org/{doi}") == doi
