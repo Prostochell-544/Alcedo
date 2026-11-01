@@ -154,12 +154,12 @@ def test_quota_running_out_tops_up_from_openalex_and_stops_searching(serp):
     assert "SerpApi off (Your account has run out of searches.)" in blocks[Q_DEAD][0]
 
 
-def test_redo_openalex_collects_those_blocks_through_serpapi(serp):
+def test_redo_free_collects_those_blocks_through_serpapi(serp):
     serp["quota_after"] = 1
     alcedo("--serpapi-key", "KEY")
     serp["quota_after"] = None
     serp["serp"].clear()
-    assert alcedo("--serpapi-key", "KEY", "--redo-openalex") == 0
+    assert alcedo("--serpapi-key", "KEY", "--redo-free") == 0
     assert serp["serp"] == [Q_PARTIAL, Q_DEAD, Q_AFTER, Q_LAST]
     assert "Source:" not in serp["results"].read_text(encoding="utf-8")
 

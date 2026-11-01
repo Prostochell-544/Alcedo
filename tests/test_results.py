@@ -27,12 +27,12 @@ def test_load_drops_error_blocks(tmp_path):
     assert list(load_results(path)) == ["ok"]
 
 
-def test_redo_openalex_drops_openalex_blocks_only_when_asked(tmp_path):
+def test_redo_free_drops_openalex_blocks_only_when_asked(tmp_path):
     path = tmp_path / "r.txt"
     blocks = {"scholar": ["https://doi.org/10.1/a"], "oa": ["Source: OpenAlex", "https://doi.org/10.1/b"]}
     save_results(path, list(blocks), blocks)
     assert list(load_results(path)) == ["scholar", "oa"]
-    assert list(load_results(path, redo_openalex=True)) == ["scholar"]
+    assert list(load_results(path, redo_free=True)) == ["scholar"]
 
 
 def test_load_missing_file_is_empty(tmp_path):

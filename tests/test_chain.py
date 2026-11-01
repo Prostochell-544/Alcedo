@@ -110,7 +110,7 @@ def test_openalex_only_and_scholar_only_leave_semantic_scholar_out(semantic):
 
 def test_redo_collects_free_blocks_again_through_the_api(semantic):
     assert with_semantic() == 0
-    assert with_semantic("--searchapi-key", "KEY", "--redo-openalex") == 0
+    assert with_semantic("--searchapi-key", "KEY", "--redo-free") == 0
     assert "Source:" not in semantic["results"].read_text(encoding="utf-8")
 
 
@@ -303,7 +303,7 @@ def test_summary_says_how_many_queries_used_direct_search(world, capsys):
 def test_redo_collects_direct_blocks_again_through_the_api(world):
     alcedo("--direct-scholar")
     world["direct"].clear()
-    assert alcedo("--searchapi-key", "KEY", "--redo-openalex") == 0
+    assert alcedo("--searchapi-key", "KEY", "--redo-free") == 0
     assert world["api"] == list(QUERIES)
     assert "Source:" not in world["results"].read_text(encoding="utf-8")
 
@@ -364,7 +364,7 @@ def test_without_key_or_choice_the_user_is_pointed_to_setup(world, capsys):
 
 def test_setup_overview_states_costs_and_who_is_responsible():
     text = setup_wizard.OVERVIEW
-    for fact in ("your own key", "100 free", "2500 free", "not tested yet", "250 free", "phone", "3 requests",
+    for fact in ("your own key", "100 free", "2500 free", "5 on Serper", "250 free", "phone", "3 requests",
                  "visible to the provider", "OpenAlex", "Semantic Scholar", "left out"):
         assert fact in text
 

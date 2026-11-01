@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import time
 from collections import Counter
 from urllib.parse import urlparse
@@ -23,7 +24,9 @@ from .doi import (
 from .net import SESSION, api_headers
 from .results import NOT_FOUND
 from .sources.openalex import OPENALEX_TYPES, OPENALEX_URL
+from .verify import doi_exists
 
+URL_NUMBER_RE = re.compile(r"/\d+$")
 CROSSREF_URL = "https://api.crossref.org/works"
 EUROPEPMC_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 # Real publications only: without this filter Crossref also returns peer reviews and
@@ -101,6 +104,20 @@ def _attempt(service: str, func, *func_args) -> str | None:
         return None
 
 
+def _without_page_number(doi: str, args: argparse.Namespace) -> str:
+    """Drop a number that a publisher's URL put after the DOI, as in 10.1093/reprod/xaag115/8787412.
+
+    A real DOI can end the same way, as in 10.1088/1742-6596/1234/1/012001, so only the registry can tell.
+    Without a clear answer the DOI stays as found.
+    """
+    shorter = URL_NUMBER_RE.sub("", doi)
+    if shorter == doi or not exact_doi(shorter):
+        return doi
+    if doi_exists(doi, args.http_timeout) is False and doi_exists(shorter, args.http_timeout):
+        return shorter
+    return doi
+
+
 def find_doi(pub: dict, args: argparse.Namespace) -> str | None:
     if pub.get("doi"):  # the search source already gave it
         return pub["doi"]
@@ -109,7 +126,9 @@ def find_doi(pub: dict, args: argparse.Namespace) -> str | None:
 
     # 1. No network needed: the DOI is in the URL or follows from an identifier in it.
     for url in urls:
-        if doi := extract_doi(url) or doi_from_url_pattern(url):
+        if doi := extract_doi(url):
+            return doi if exact_doi(url) else _without_page_number(doi, args)
+        if doi := doi_from_url_pattern(url):
             return doi
 
     # 2. PubMed and PMC links resolve through Europe PMC.
@@ -125,7 +144,7 @@ def find_doi(pub: dict, args: argparse.Namespace) -> str | None:
             if any(h in parsed.netloc.lower() for h in NO_FETCH_HOSTS) or parsed.path.lower().endswith(".pdf"):
                 continue
             if doi := _attempt("publisher pages", doi_from_page, url, args.http_timeout):
-                return doi
+                return _without_page_number(doi, args)
 
     # 4. Title search: Crossref, then OpenAlex.
     if args.title_search and pub.get("title"):

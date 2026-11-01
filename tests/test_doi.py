@@ -106,5 +106,24 @@ def test_title_match_keeps_the_registry_doi_whole():
     assert best_title_match("A report", [("10.1234/report.full", "A report")]) == "10.1234/report.full"
 
 
+@pytest.mark.parametrize("preprint", ["10.2139/ssrn.1234567", "10.1101/2020.03.22.002386", "10.48550/arXiv.2101.01234"])
+def test_title_match_prefers_the_published_paper_over_its_preprint(preprint):
+    title = "A long enough title for the comparison"
+    assert best_title_match(title, [(preprint, title), ("10.1016/j.x.2021.1", title)]) == "10.1016/j.x.2021.1"
+    assert best_title_match(title, [("10.1016/j.x.2021.1", title), (preprint, title)]) == "10.1016/j.x.2021.1"
+
+
+def test_title_match_takes_a_preprint_when_nothing_else_matches():
+    title = "A long enough title for the comparison"
+    candidates = [("10.2139/ssrn.1234567", title), ("10.1/x", "Something else")]
+    assert best_title_match(title, candidates) == "10.2139/ssrn.1234567"
+
+
+def test_title_match_treats_a_cold_spring_harbor_journal_as_published():
+    title = "A long enough title for the comparison"
+    assert best_title_match(title, [("10.1101/gr.123456", title), ("10.1/y", title)]) in {"10.1101/gr.123456", "10.1/y"}
+    assert best_title_match(title, [("10.1101/gr.123456", title), ("10.2139/ssrn.1", title)]) == "10.1101/gr.123456"
+
+
 def test_title_match_rejects_different_title():
     assert best_title_match("Array programming with NumPy", [("10.1/x", "Numpy")]) is None

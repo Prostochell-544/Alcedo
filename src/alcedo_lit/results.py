@@ -32,10 +32,10 @@ def is_results_file(path: Path) -> bool:
     return not text.strip() or any(HEADER_RE.match(line) for line in text.splitlines())
 
 
-def load_results(path: Path, redo_openalex: bool = False) -> dict[str, list[str]]:
+def load_results(path: Path, redo_free: bool = False) -> dict[str, list[str]]:
     """Load finished blocks for --resume.
 
-    Blocks with an error line are dropped so they get collected again. With `redo_openalex`,
+    Blocks with an error line are dropped so they get collected again. With `redo_free`,
     so are blocks with a source line, which means they did not come wholly from a search API.
     """
     results: dict[str, list[str]] = {}
@@ -50,7 +50,7 @@ def load_results(path: Path, redo_openalex: bool = False) -> dict[str, list[str]
 
     def redo(line: str) -> bool:
         return line.startswith(ERROR_PREFIX) or (
-            redo_openalex and line.startswith(SOURCE_PREFIX))
+            redo_free and line.startswith(SOURCE_PREFIX))
 
     return {q: lines for q, lines in results.items() if not any(redo(line) for line in lines)}
 

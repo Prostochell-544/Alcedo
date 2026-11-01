@@ -59,6 +59,31 @@ def test_serper_stops_when_a_page_only_repeats(monkeypatch):
     assert (len(pubs), error, calls) == (1, None, [1, 2])
 
 
+def test_serper_gives_an_empty_page_after_a_full_one_a_second_try(monkeypatch):
+    calls = []
+    answers = {1: [10], 2: [10], 3: [0, 10], 4: [10], 5: [10]}
+
+    def flaky(url, json=None, **_):
+        page = json["page"]
+        calls.append(page)
+        count = answers[page].pop(0)
+        organic = [{"title": f"T{page}.{i}", "link": "https://x.org/1"} for i in range(count)]
+        return FakeResponse(data={"organic": organic})
+
+    monkeypatch.setattr(SESSION, "post", flaky)
+    pubs, error, _ = search_serper("q", serper_args())
+    assert (len(pubs), error) == (50, None)
+    assert calls == [1, 2, 3, 3, 4, 5]
+
+
+def test_serper_stops_when_the_page_stays_empty(monkeypatch):
+    calls = []
+    monkeypatch.setattr(SESSION, "post", fake_serper(20, calls))
+    pubs, error, _ = search_serper("q", serper_args())
+    assert (len(pubs), error) == (20, None)
+    assert calls == [1, 2, 3, 3]  # one extra query, only when a full page is followed by an empty one
+
+
 def test_serper_record_fields(monkeypatch):
     monkeypatch.setattr(SESSION, "post", fake_serper(1, []))
     pubs, _, _ = search_serper("q", serper_args())
@@ -156,6 +181,19 @@ def test_semantic_scholar_keeps_refusing(monkeypatch):
         return FakeResponse(status_code=429, data={})
 
     monkeypatch.setattr(SESSION, "get", refuse)
+    records, error, stop = search_semantic_scholar("x", s2_args())
+    assert (records, stop, len(calls)) == ([], False, 3)
+    assert "free API key" in error
+
+
+def test_semantic_scholar_403_without_a_key_is_retried_and_does_not_turn_it_off(monkeypatch):
+    calls = []
+
+    def forbid(*_, **__):
+        calls.append(1)
+        return FakeResponse(status_code=403, data={"message": "Forbidden"})
+
+    monkeypatch.setattr(SESSION, "get", forbid)
     records, error, stop = search_semantic_scholar("x", s2_args())
     assert (records, stop, len(calls)) == ([], False, 3)
     assert "free API key" in error

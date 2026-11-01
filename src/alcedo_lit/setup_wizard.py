@@ -15,9 +15,9 @@ Alcedo searches in this order:
 1. Google Scholar through a search API, with your own key. This gave the best results in our small tests.
    You create the key, and you accept the provider's terms. Your queries are visible to the provider.
      SearchApi  https://www.searchapi.io   100 free requests to try it, then from $40 a month
-     Serper     https://serper.dev         2500 free queries, then one-off packs from $50 (not tested yet)
+     Serper     https://serper.dev         2500 free queries, then one-off packs from $50
      SerpApi    https://serpapi.com        250 free searches a month, asks for a phone number
-   With SearchApi, a query with 50 results uses 3 requests. Prices and limits may have changed; check the site.
+   A query with 50 results uses 3 requests on SearchApi and 5 on Serper. Prices and limits may have changed.
 
 2. Without a working API, the free sources together. A source that fails is left out.
    Semantic Scholar. Matches strictly, so it finds less but is often precise. No key is needed, but then all

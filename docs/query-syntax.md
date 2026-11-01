@@ -1,8 +1,14 @@
 # How to write queries
 
-The same query can go to Google Scholar or to OpenAlex, so write it to work in both.
+The same query can go to Google Scholar, Semantic Scholar or OpenAlex, so write it to work in all of them.
 OpenAlex behaviour and work counts below were measured on the live API in October 2026.
 Limits marked as rules of thumb are advice, not measurements.
+
+To find the most common mistakes before a run, without using any quota:
+
+```bash
+alcedo check
+```
 
 ## The query file
 
@@ -30,6 +36,8 @@ Things that are easy to get wrong:
   `nacre (toughness OR fracture)` found 6,157.
 - OpenAlex ignores a raw `-word`, so Alcedo turns it into `NOT word`. A hyphen inside a word is
   safe: `mussel-inspired`, `Ti-6Al-4V`.
+- Semantic Scholar matches strictly: every term has to appear in the title or abstract. If it finds nothing, the
+  other sources may still answer. Alcedo translates OR for it, and takes its most cited matches first.
 - Use straight quotes. Guillemets such as `«…»` do not mark a phrase.
 - Special characters in terms are fine: `Ti-6Al-4V`, `β-cyclodextrin`, `Ti/TiN`, `Li+`.
 
@@ -78,7 +86,8 @@ bioinspired superhydrophobic surface "lotus effect" self-cleaning;
 - Put the most important queries first, so they get through before a quota runs out.
 - SearchApi: 100 free requests to try it at the time of writing. A query with 50 results uses 3, so that is about
   33 queries.
-- Serper: 2,500 free queries at the time of writing. Alcedo has not yet been run with a real Serper key.
+- Serper: 2,500 free queries at the time of writing. A query with 50 results uses 5, so that is about 500 queries. In our
+  test its first 10 results matched SearchApi, and later ones differed.
 - Semantic Scholar: free, but without a key all users share one limit, so refusals (`429`) are possible.
 - SerpApi free tier: 250 searches a month and 50 an hour at the time of writing. A query with 50 results
   uses 3 searches, so that is about 16 queries an hour and 80 a month. A query with up to 20 results uses 1.

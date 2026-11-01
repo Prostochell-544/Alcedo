@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from . import __version__, setup_wizard
+from .check import run_check
 from .config import load_config
 from .pipeline import run
 
@@ -17,7 +18,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="alcedo",
         description="Collect DOIs from a list of literature search queries, grouped by query. "
-                    "To set up API keys and see the search options, run: alcedo setup",
+                    "To set up API keys and see the search options, run: alcedo setup. "
+                    "To find mistakes in your queries first, run: alcedo check",
     )
     p.add_argument("--version", action="version", version=f"alcedo {__version__}")
     p.add_argument("-i", "--input", type=Path, default=Path("queries.txt"),
@@ -53,7 +55,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="do not look for a DOI by title in Crossref and OpenAlex")
     p.add_argument("--resume", action="store_true",
                    help="skip queries already collected in the results file")
-    p.add_argument("--redo-openalex", action="store_true",
+    p.add_argument("--redo-free", action="store_true",
                    help="like --resume, but also collect blocks from the free sources again, "
                         "for example after adding an API key")
     p.add_argument("--overwrite", action="store_true",
@@ -103,6 +105,8 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["setup"]:
         return setup_wizard.run_setup()
+    if argv[:1] == ["check"]:
+        return run_check(argv[1:])
     args = parse_args(argv)
     decide_direct_search(args)
     return run(args)

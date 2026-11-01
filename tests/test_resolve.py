@@ -5,6 +5,7 @@ import requests
 
 from alcedo_lit import resolve
 from alcedo_lit.net import SESSION, api_headers
+from alcedo_lit.verify import HANDLE_API
 from helpers import FakeResponse
 
 
@@ -38,6 +39,49 @@ def test_doi_given_by_the_source_is_used_as_is(calls):
 def test_doi_in_url_needs_no_network(calls):
     pub = {"pub_url": "https://doi.org/10.1234/abc", "title": "t"}
     assert resolve.find_doi(pub, make_args()) == "10.1234/abc"
+    assert calls["urls"] == []
+
+
+def handles(calls, known, unknown=()):
+    """Answer the doi.org registry: DOIs in `known` exist, DOIs in `unknown` do not, others give no clear answer."""
+    # The fake matches by prefix and in order, so the longer DOIs, which are the unknown ones here, come first.
+    for doi in unknown:
+        calls["responses"][HANDLE_API + doi] = FakeResponse(data={"responseCode": 100})
+    for doi in known:
+        calls["responses"][HANDLE_API + doi] = FakeResponse(data={"responseCode": 1})
+
+
+def test_page_number_after_a_doi_is_dropped_when_the_registry_says_so(calls):
+    handles(calls, known=["10.1093/reprod/xaag115"], unknown=["10.1093/reprod/xaag115/8787412"])
+    pub = {"pub_url": "https://academic.oup.com/article-lookup/doi/10.1093/reprod/xaag115/8787412"}
+    assert resolve.find_doi(pub, make_args()) == "10.1093/reprod/xaag115"
+
+
+def test_a_doi_that_really_ends_in_a_number_is_kept(calls):
+    doi = "10.1088/1742-6596/1234/1/012001"
+    handles(calls, known=[doi])
+    assert resolve.find_doi({"pub_url": f"https://iopscience.iop.org/article/{doi}"}, make_args()) == doi
+
+
+def test_without_an_answer_from_the_registry_the_doi_stays_as_found(calls):
+    doi = "10.1093/reprod/xaag115/8787412"
+    assert resolve.find_doi({"pub_url": f"https://academic.oup.com/article-lookup/doi/{doi}"}, make_args()) == doi
+
+
+def test_when_neither_form_is_registered_the_doi_stays_as_found(calls):
+    doi = "10.1093/reprod/xaag115/8787412"
+    handles(calls, known=[], unknown=[doi, "10.1093/reprod/xaag115"])
+    assert resolve.find_doi({"pub_url": f"https://academic.oup.com/x/{doi}"}, make_args()) == doi
+
+
+def test_a_doi_org_link_is_taken_whole_with_no_lookup(calls):
+    doi = "10.1234/abc/123"
+    assert resolve.find_doi({"pub_url": f"https://doi.org/{doi}"}, make_args()) == doi
+    assert calls["urls"] == []
+
+
+def test_ordinary_doi_in_a_url_needs_no_lookup(calls):
+    assert resolve.find_doi({"pub_url": "https://publisher.org/doi/10.1234/abc"}, make_args()) == "10.1234/abc"
     assert calls["urls"] == []
 
 

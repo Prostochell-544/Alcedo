@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from tqdm import tqdm
 
+from .check import queries_with_problems
 from .doi import normalize_title
 from .resolve import failed_lookups, resolve_dois
 from .results import (
@@ -285,7 +286,7 @@ def _check_serpapi(args: argparse.Namespace, todo: list[str]) -> tuple[int | Non
         return None, "SerpApi off (limit reached)"
     if known and min(known) < per_query * len(todo):
         print(f"The quota covers about {min(known) // per_query} of {len(todo)} queries. The rest use the next "
-              "source; collect them again later with --redo-openalex.")
+              "source; collect them again later with --redo-free.")
     return None, None
 
 
@@ -319,7 +320,7 @@ def build_backends(args: argparse.Namespace,
         print("SearchApi: a query with 50 results uses 3 requests from your quota.")
         apis.append(Backend("SearchApi", lambda q, a, on_page: searchapi.search_searchapi(q, a, on_page=on_page)))
     if args.serper_key:
-        print("Serper: a query with 50 results takes 5 pages, each using your quota.")
+        print("Serper: a query with 50 results uses 5 queries from your quota.")
         apis.append(Backend("Serper", lambda q, a, on_page: serper.search_serper(q, a, on_page=on_page)))
     if args.serpapi_key:
         stop, skipped = _check_serpapi(args, todo)
@@ -341,16 +342,24 @@ def run(args: argparse.Namespace) -> int:
     if not args.input.exists():
         print(f"Query file not found: {args.input}", file=sys.stderr)
         return 1
-    queries = read_queries(args.input)
+    try:
+        queries = read_queries(args.input)
+        doubtful = queries_with_problems(args.input)
+    except UnicodeDecodeError:
+        print(f"{args.input} is not saved as UTF-8. Save it as UTF-8 and try again.", file=sys.stderr)
+        return 1
     if not queries:
         print(f"No queries in {args.input} (separate them with ';')", file=sys.stderr)
         return 1
+    if doubtful:
+        print(f"{doubtful} of {len(queries)} queries may have mistakes. To see them, run: alcedo check -i {args.input}",
+              file=sys.stderr)
     if args.source == "scholar" and not (args.searchapi_key or args.serper_key or args.serpapi_key
                                          or args.direct_scholar):
         print("--source scholar needs a search API key (run: alcedo setup) or --direct-scholar.", file=sys.stderr)
         return 2
 
-    continuing = args.resume or args.redo_openalex
+    continuing = args.resume or args.redo_free
     if args.output.exists() and not args.overwrite:
         if not continuing:
             print(f"{args.output} already exists. Use --resume to continue it or --overwrite to replace it.",
@@ -362,7 +371,7 @@ def run(args: argparse.Namespace) -> int:
             return 1
 
     failed_lookups.clear()
-    results = load_results(args.output, args.redo_openalex) if continuing and not args.overwrite else {}
+    results = load_results(args.output, args.redo_free) if continuing and not args.overwrite else {}
     todo = [q for q in queries if q not in results]
 
     apis, direct, stop, skipped = build_backends(args, todo)
@@ -426,7 +435,7 @@ def run(args: argparse.Namespace) -> int:
         print(scholar.REFUSED)
     if via_direct:
         print(f"{via_direct} queries used direct Google Scholar search, so their lists may be incomplete. "
-              "With a search API key, collect them again using --redo-openalex.")
+              "With a search API key, collect them again using --redo-free.")
     if not_registered:
         print(f"Marked '{NOT_REGISTERED}': {not_registered} result lines. doi.org does not know these DOIs.")
     if unchecked:

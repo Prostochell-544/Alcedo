@@ -48,7 +48,8 @@ def search_semantic_scholar(query: str, args: argparse.Namespace, on_page=None) 
             return [{"title": p.get("title") or "", "doi": exact_doi((p.get("externalIds") or {}).get("DOI"))}
                     for p in papers], None, False
         error = f"HTTP {resp.status_code}"
-        if resp.status_code == 429:
+        # Without a key, a 403 refuses the shared traffic, and the next request can pass. With one, it is the key.
+        if resp.status_code == 429 or (resp.status_code == 403 and not args.semantic_scholar_key):
             error += " - shared limit reached; a free API key gives you your own limit"
         elif resp.status_code < 500:
             return [], error, resp.status_code in {401, 403}

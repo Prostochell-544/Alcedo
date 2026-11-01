@@ -11,12 +11,16 @@ requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "Alcedo contributors" }]
-keywords = ["literature search", "doi", "bibliometrics", "systematic review", "openalex", "google scholar"]
+keywords = ["literature search", "doi", "bibliometrics", "systematic review", "openalex", "semantic scholar",
+            "google scholar"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
@@ -24,8 +28,13 @@ dependencies = [
     "tqdm>=4.66",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Prostochell-544/Alcedo"
+Issues = "https://github.com/Prostochell-544/Alcedo/issues"
+Changelog = "https://github.com/Prostochell-544/Alcedo/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
-# Experimental direct Google Scholar access. scholarly 1.7.11 imports a module that
+# Direct Google Scholar access. scholarly 1.7.11 imports a module that
 # bibtexparser 2 removed, and passes an argument to httpx.Client that httpx 0.28 removed.
 scholar = [
     "scholarly>=1.7.11",

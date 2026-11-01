@@ -21,6 +21,12 @@ DOI_TAIL_RE = re.compile(
     re.IGNORECASE,
 )
 _BRACKETS = {")": "(", "]": "[", "}": "{"}
+# Preprint servers. The bioRxiv pattern leaves out Cold Spring Harbor journals, such as 10.1101/gr.123456.
+PREPRINT_DOI_RE = re.compile(
+    r"10\.(?:2139/ssrn|1101/\d|48550/|21203/rs\.|20944/preprints|31219/osf|31234/osf|26434/chemrxiv|22541/au\."
+    r"|36227/techrxiv)",
+    re.IGNORECASE,
+)
 
 ARXIV_RE = re.compile(r"arxiv\.org/(?:abs|pdf)/([a-z\-]+(?:\.[a-z]{2})?/\d{7}|\d{4}\.\d{4,5})", re.I)
 NATURE_RE = re.compile(r"nature\.com/articles/([a-z0-9.\-]+?)(?:\.pdf)?(?:[/?#]|$)", re.I)
@@ -117,19 +123,24 @@ def normalize_title(title: str) -> str:
 def best_title_match(title: str, candidates) -> str | None:
     """Pick the DOI whose title is closest to `title`, if it clears the threshold.
 
-    `candidates` is an iterable of (doi, title) pairs.
+    `candidates` is an iterable of (doi, title) pairs. A preprint and the paper it became often share
+    a title, so a preprint is chosen only when no published version clears the threshold.
     """
     target = normalize_title(title)
     # A title cut off with an ellipsis can only be compared by its beginning.
     truncated = title.rstrip().endswith(("…", "..."))
-    best_doi, best_score = None, 0.0
+    best = {False: (None, 0.0), True: (None, 0.0)}
     for doi, candidate in candidates:
+        if not doi:
+            continue
         candidate = normalize_title(candidate or "")
         if truncated:
             candidate = candidate[:len(target)]
         score = SequenceMatcher(None, target, candidate).ratio()
-        if doi and score > best_score:
-            best_doi, best_score = doi, score
-    if best_doi and best_score >= TITLE_MATCH_THRESHOLD:
-        return exact_doi(best_doi)
+        preprint = bool(PREPRINT_DOI_RE.match(doi))
+        if score > best[preprint][1]:
+            best[preprint] = (doi, score)
+    for doi, score in (best[False], best[True]):
+        if doi and score >= TITLE_MATCH_THRESHOLD:
+            return exact_doi(doi)
     return None
