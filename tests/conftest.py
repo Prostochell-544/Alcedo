@@ -24,3 +24,4 @@ def no_keys_from_the_machine(monkeypatch, tmp_path_factory):
     for name in ("SEARCHAPI_KEY", "SERPER_API_KEY", "SERPAPI_KEY", "OPENALEX_API_KEY", "SEMANTIC_SCHOLAR_API_KEY"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("ALCEDO_CONFIG_DIR", str(tmp_path_factory.mktemp("config")))
+    monkeypatch.setenv("ALCEDO_CACHE_DIR", str(tmp_path_factory.mktemp("cache")))

@@ -22,22 +22,27 @@ relevant results in our test, and free sources stay available for people who can
 - `alcedo check`: find mistakes before a run, such as lowercase `or`, `*`, guillemets, unbalanced brackets.
 - Documentation in English, Russian and Ukrainian. First release on PyPI as `alcedo-lit`.
 
-## 0.2
+## 0.2: from a raw list to a filtered one
 
-- Language filter. Quartile filter using an SJR file the user downloads from Scimago;
-  the file is not redistributed, because its terms could not be confirmed.
+- Metadata for each DOI from OpenAlex, with Crossref for what it lacks: title, year, journal, ISSN, language, type,
+  retraction. Tested on 1,621 DOIs from real runs: year and language filled for 99-100%, ISSN for 85-91%.
+- A cache, so a repeated run does not look up the same DOIs and records again.
+- `alcedo filter`: years, language, quartile, excluded words, retracted papers. It works on collected results, so
+  changing a condition uses no search quota. The quartile comes from an SJR file the user downloads from Scimago,
+  because its terms for redistribution could not be confirmed.
+- Records with unknown data are kept apart as `unknown`, never dropped silently. In our runs about a quarter of the
+  results from Google Scholar had no DOI.
 - An `excluded.csv` report that gives the reason for each excluded record.
-- Filters: years, excluded words, journal lists (idea: PyPaperBot, findpapers).
-- Export to BibTeX and RIS, with abstracts so that ASReview can read it.
-- Subcommands (`search`, `filter`, `export`).
+- Export to BibTeX and RIS, so that Zotero and ASReview can read the results.
+
+## 0.3 and later
+
+- Russian and Ukrainian interface.
 - A query parser that translates one syntax for each source (idea: findpapers).
 - `--scope`: search titles and abstracts only, to reduce topic drift (idea: findpapers).
 - Two-pass deduplication: by DOI, then by title and year (idea: findpapers).
 - Retries with backoff and per-source rate limits (idea: findpapers, pyalex).
-- Retraction flag (idea: paper-qa; OpenAlex `is_retracted`).
-- Cache.
-- Russian and Ukrainian interface.
-- Tests of Serper and Semantic Scholar on real queries, to settle the default order and cost figures.
+- Tests of Serper and Semantic Scholar on more queries, to settle the default order.
 - An application icon made from the logo.
 - More search sources: PubMed, arXiv, OpenAIRE.
 - Citation snowballing (idea: findpapers).
@@ -46,9 +51,6 @@ relevant results in our test, and free sources stay available for people who can
 - `no_access.csv`: papers with no open copy, for interlibrary loan or asking the authors.
 - A run log with counts at every stage, in the style of PRISMA.
 - A compare mode that shows how much the sources differ on the user's own queries.
-
-## 0.3 and later
-
 - Import and filter existing RIS and BibTeX lists (idea: litstudy).
 - OpenAlex semantic search (idea: pyalex).
 - JUFO levels as a built-in quality signal, once its terms are confirmed (idea: paper-qa).

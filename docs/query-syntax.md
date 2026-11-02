@@ -88,7 +88,7 @@ bioinspired superhydrophobic surface "lotus effect" self-cleaning;
   33 queries.
 - Serper: 2,500 free queries at the time of writing. A query with 50 results uses 5, so that is about 500 queries. In our
   test its first 10 results matched SearchApi, and later ones differed.
-- Semantic Scholar: free, but without a key all users share one limit, so refusals (`429`) are possible.
+- Semantic Scholar: free, but without a key all users share one limit, so refusals (`429`) are common. A free key helps.
 - SerpApi free tier: 250 searches a month and 50 an hour at the time of writing. A query with 50 results
   uses 3 searches, so that is about 16 queries an hour and 80 a month. A query with up to 20 results uses 1.
 - OpenAlex: at the time of writing, about $0.10 of API budget a day without a key and $1 with a free key,

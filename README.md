@@ -153,11 +153,15 @@ Alcedo asks once before using direct search, and remembers your answer. `alcedo 
 `SERPER_API_KEY`, `SERPAPI_KEY`, `OPENALEX_API_KEY` and `SEMANTIC_SCHOLAR_API_KEY` environment variables take priority
 over that file, and command line options take priority over both.
 
+Alcedo remembers DOI lookups in a local cache, so a repeated run is faster. The cache holds the titles and links of
+records you searched for, and it stays on your computer: `%LOCALAPPDATA%lcedo` on Windows, `~/.cache/alcedo` elsewhere.
+
 ```bash
 alcedo --resume          # continue after an interruption
 alcedo --redo-free   # collect blocks from the free sources again, for example after adding a key
 alcedo --source openalex # OpenAlex only
 alcedo --no-semantic-scholar  # leave Semantic Scholar out of the free sources
+alcedo --no-cache         # do not reuse or save DOI lookups from earlier runs
 alcedo --help            # all options
 ```
 

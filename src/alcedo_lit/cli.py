@@ -62,6 +62,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="replace an existing results file and collect everything again")
     p.add_argument("--verify-dois", action="store_true",
                    help="check every DOI in the doi.org registry and mark the ones that do not exist")
+    p.add_argument("--no-cache", dest="use_cache", action="store_false",
+                   help="do not reuse or save DOI lookups from earlier runs")
     p.add_argument("--max-failures", type=int, default=2,
                    help="stop using a Google Scholar source after this many failures in a row (default: 2)")
     p.add_argument("--page-timeout", type=float, default=120,

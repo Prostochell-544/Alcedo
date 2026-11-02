@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from tqdm import tqdm
 
+from .cache import Cache
 from .check import queries_with_problems
 from .doi import normalize_title
 from .resolve import failed_lookups, resolve_dois
@@ -371,6 +372,7 @@ def run(args: argparse.Namespace) -> int:
             return 1
 
     failed_lookups.clear()
+    args.cache = Cache() if args.use_cache else None
     results = load_results(args.output, args.redo_free) if continuing and not args.overwrite else {}
     todo = [q for q in queries if q not in results]
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import time
 from collections import Counter
@@ -11,6 +12,8 @@ from urllib.parse import urlparse
 import requests
 from tqdm import tqdm
 
+from . import __version__
+from .cache import MISS
 from .doi import (
     best_title_match,
     doi_from_meta,
@@ -27,6 +30,11 @@ from .sources.openalex import OPENALEX_TYPES, OPENALEX_URL
 from .verify import doi_exists
 
 URL_NUMBER_RE = re.compile(r"/\d+$")
+# The version is part of the name, because a new version may find DOIs that an older one got wrong.
+DOI_CACHE_KIND = f"doi-{__version__}"
+NO_DOI_CACHE_KIND = f"no-doi-{__version__}"
+DOI_FOUND_MAX_AGE_DAYS = 180
+NO_DOI_MAX_AGE_DAYS = 30  # shorter, because a registry can add a DOI later
 CROSSREF_URL = "https://api.crossref.org/works"
 EUROPEPMC_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 # Real publications only: without this filter Crossref also returns peer reviews and
@@ -113,7 +121,10 @@ def _without_page_number(doi: str, args: argparse.Namespace) -> str:
     shorter = URL_NUMBER_RE.sub("", doi)
     if shorter == doi or not exact_doi(shorter):
         return doi
-    if doi_exists(doi, args.http_timeout) is False and doi_exists(shorter, args.http_timeout):
+    answer = doi_exists(doi, args.http_timeout)
+    if answer is None:
+        failed_lookups["doi.org"] += 1
+    elif answer is False and doi_exists(shorter, args.http_timeout):
         return shorter
     return doi
 
@@ -154,6 +165,26 @@ def find_doi(pub: dict, args: argparse.Namespace) -> str | None:
     return None
 
 
+def _find_doi_cached(pub: dict, args: argparse.Namespace) -> str | None:
+    """Find a DOI, remembering the answer. "No DOI" is remembered only after every lookup was tried and answered."""
+    cache = getattr(args, "cache", None)
+    if cache is None or pub.get("doi"):
+        return find_doi(pub, args)
+    key = json.dumps([pub.get("title"), pub.get("pub_url"), pub.get("eprint_url")], ensure_ascii=False)
+    known = cache.get(DOI_CACHE_KIND, key, DOI_FOUND_MAX_AGE_DAYS)
+    if known is not MISS and (known or cache.get(NO_DOI_CACHE_KIND, key, NO_DOI_MAX_AGE_DAYS) is not MISS):
+        return known
+
+    failed_before = sum(failed_lookups.values())
+    doi = find_doi(pub, args)
+    if doi:
+        cache.set(DOI_CACHE_KIND, key, doi)
+    elif args.page_meta and args.title_search and sum(failed_lookups.values()) == failed_before:
+        cache.set(DOI_CACHE_KIND, key, None)
+        cache.set(NO_DOI_CACHE_KIND, key, True)
+    return doi
+
+
 def resolve_dois(pubs: list[dict], args: argparse.Namespace, source: str = "Google Scholar") -> list[str]:
     """Build the result lines of one query."""
     if not pubs:
@@ -162,7 +193,7 @@ def resolve_dois(pubs: list[dict], args: argparse.Namespace, source: str = "Goog
     for pub in tqdm(pubs, desc="  resolving DOIs", unit="paper", leave=False):
         title = pub.get("title") or "untitled"
         try:
-            doi = find_doi(pub, args)
+            doi = _find_doi_cached(pub, args)
         except Exception as exc:  # one odd record must not take down the whole run, but it must show
             tqdm.write(f"[!] Could not process '{title[:60]}': {type(exc).__name__}: {exc}")
             doi = None
