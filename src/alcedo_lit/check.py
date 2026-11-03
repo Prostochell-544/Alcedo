@@ -7,6 +7,8 @@ import re
 import sys
 from pathlib import Path
 
+from .results import counted
+
 ERROR, WARNING = "error", "warning"
 QUOTED_RE = re.compile(r'"[^"]*"')
 CURLY_QUOTES = "«»“”„‟‘’"
@@ -137,5 +139,6 @@ def run_check(argv: list[str]) -> int:
             print(f"  {level}: {message}")
             errors += level == ERROR
             warnings += level == WARNING
-    print(f"Checked {len(checked)} queries: {errors} errors, {warnings} warnings.")
+    print(f"Checked {counted(len(checked), 'query', 'queries')}: {counted(errors, 'error')}, "
+          f"{counted(warnings, 'warning')}.")
     return 1 if errors else 0

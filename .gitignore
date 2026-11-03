@@ -27,5 +27,8 @@ venv/
 /*results*.txt
 /*results*.csv
 /*_unique.csv
+/*_filtered.csv
+/*_excluded.csv
+/*_unknown.csv
 !/alcedo_results.txt
 !/alcedo_results_unique.csv

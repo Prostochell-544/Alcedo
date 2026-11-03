@@ -84,21 +84,21 @@ def test_command_reports_problems_and_fails_on_errors(tmp_path, capsys):
     assert "Query 2: nacre*" in out
     assert "error: `*`" in out
     assert "Query 3: gecko or adhesive" in out
-    assert "Checked 3 queries: 1 errors, 2 warnings." in out  # one word, and the lowercase or
+    assert "Checked 3 queries: 1 error, 2 warnings." in out  # one word, and the lowercase or
 
 
 def test_command_passes_on_warnings_only(tmp_path, capsys):
     path = tmp_path / "q.txt"
     path.write_text("gecko or adhesive;", encoding="utf-8")
     assert cli.main(["check", "-i", str(path)]) == 0
-    assert "1 warnings" in capsys.readouterr().out
+    assert "1 warning." in capsys.readouterr().out
 
 
 def test_command_uses_queries_txt_by_default(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "queries.txt").write_text("nacre toughness;", encoding="utf-8")
     assert cli.main(["check"]) == 0
-    assert "Checked 1 queries: 0 errors, 0 warnings." in capsys.readouterr().out
+    assert "Checked 1 query: 0 errors, 0 warnings." in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("content, fragment", [(None, "Cannot read"), (b"", "No queries"), (b"caf\xe9 test;", "UTF-8")])

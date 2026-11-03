@@ -99,6 +99,33 @@ alcedo --pages 1 -i test.txt -o test_results.txt --overwrite
 Read [how to write queries](https://github.com/Prostochell-544/Alcedo/blob/main/docs/query-syntax.md) before a large run. Some mistakes fail silently: a lowercase
 `or`, for example, is treated as AND. `alcedo check` finds the common ones.
 
+## Filter the results
+
+`alcedo filter` narrows a results file by year, language, quartile and words. It uses no search quota, so you can
+change the conditions as often as you like. It does look up each paper's data, in OpenAlex and then Crossref.
+
+```bash
+alcedo filter --year-from 2015 --language en --quartile Q1,Q2 --sjr scimagojr.csv --exclude-word dental
+```
+
+It writes three lists, with the title, year, journal, quartile and authors of each record:
+
+| File | What is in it |
+|---|---|
+| `alcedo_filtered.csv` | Records that meet all the conditions |
+| `alcedo_excluded.csv` | Records that fail a condition, each with the reason |
+| `alcedo_unknown.csv` | Records whose data is missing, each with the reason. Check these by hand, because they may well fit |
+
+Nothing is dropped silently. Records without a DOI always go to the unknown list, unless an excluded word appears in the
+title. Papers marked as retracted are excluded unless you add `--keep-retracted`, though only OpenAlex reports this.
+Language comes from OpenAlex, which detects it automatically and can be wrong. Excluded words are searched for in the
+title and abstract, and many records have no abstract.
+
+The quartile comes from a file you download yourself: open the
+[Scimago journal rank](https://www.scimagojr.com/journalrank.php) page and choose **Download data**. Alcedo does not
+include this file. A journal can have different quartiles in different fields, and Alcedo uses the best one, so check
+the field yourself if it matters.
+
 ## Which source to use
 
 With a working API key, a query uses only the API. Otherwise it uses the free sources together, in this order:

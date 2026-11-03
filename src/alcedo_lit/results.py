@@ -32,12 +32,12 @@ def is_results_file(path: Path) -> bool:
     return not text.strip() or any(HEADER_RE.match(line) for line in text.splitlines())
 
 
-def load_results(path: Path, redo_free: bool = False) -> dict[str, list[str]]:
-    """Load finished blocks for --resume.
+def counted(number: int, noun: str, plural: str | None = None) -> str:
+    return f"{number} {noun if number == 1 else plural or noun + 's'}"
 
-    Blocks with an error line are dropped so they get collected again. With `redo_free`,
-    so are blocks with a source line, which means they did not come wholly from a search API.
-    """
+
+def read_blocks(path: Path) -> dict[str, list[str]]:
+    """Read a results file into {query: lines}."""
     results: dict[str, list[str]] = {}
     current = None
     if path.exists():
@@ -47,6 +47,16 @@ def load_results(path: Path, redo_free: bool = False) -> dict[str, list[str]]:
                 results[current] = []
             elif current is not None and line.strip():
                 results[current].append(line)
+    return results
+
+
+def load_results(path: Path, redo_free: bool = False) -> dict[str, list[str]]:
+    """Load finished blocks for --resume.
+
+    Blocks with an error line are dropped so they get collected again. With `redo_free`,
+    so are blocks with a source line, which means they did not come wholly from a search API.
+    """
+    results = read_blocks(path)
 
     def redo(line: str) -> bool:
         return line.startswith(ERROR_PREFIX) or (

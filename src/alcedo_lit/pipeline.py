@@ -23,6 +23,7 @@ from .results import (
     SOURCE_PREFIX,
     combine_results,
     combined_path,
+    counted,
     is_results_file,
     load_results,
     read_queries,
@@ -98,7 +99,7 @@ def _page_reporter(bar: tqdm, query: str):
 
 def _note_few_results(query: str, source: str, count: int) -> None:
     if count < FEW_RESULTS:
-        tqdm.write(f"[i] {source} found only {count} results for '{shorten(query)}'. "
+        tqdm.write(f"[i] {source} found only {counted(count, 'result')} for '{shorten(query)}'. "
                    "The query may be narrow, or the list may be incomplete.")
 
 
@@ -353,7 +354,8 @@ def run(args: argparse.Namespace) -> int:
         print(f"No queries in {args.input} (separate them with ';')", file=sys.stderr)
         return 1
     if doubtful:
-        print(f"{doubtful} of {len(queries)} queries may have mistakes. To see them, run: alcedo check -i {args.input}",
+        print(f"{doubtful} of {counted(len(queries), 'query', 'queries')} may have mistakes. To see them, run: "
+              f"alcedo check -i {args.input}",
               file=sys.stderr)
     if args.source == "scholar" and not (args.searchapi_key or args.serper_key or args.serpapi_key
                                          or args.direct_scholar):
@@ -436,12 +438,14 @@ def run(args: argparse.Namespace) -> int:
     if direct and direct.failures:
         print(scholar.REFUSED)
     if via_direct:
-        print(f"{via_direct} queries used direct Google Scholar search, so their lists may be incomplete. "
+        print(f"{counted(via_direct, 'query', 'queries')} used direct Google Scholar search, so the lists may be "
+              "incomplete. "
               "With a search API key, collect them again using --redo-free.")
     if not_registered:
-        print(f"Marked '{NOT_REGISTERED}': {not_registered} result lines. doi.org does not know these DOIs.")
+        print(f"Marked '{NOT_REGISTERED}': {counted(not_registered, 'result line')}. doi.org does not know them.")
     if unchecked:
-        print(f"Could not check {unchecked} DOIs in doi.org. They stay in the results; run again to check them.")
+        print(f"Could not check {counted(unchecked, 'DOI')} in doi.org. They stay in the results; "
+              "run again to check them.")
     if failed_lookups:
         details = ", ".join(f"{service}: {count}" for service, count in failed_lookups.most_common())
         print(f"Failed DOI lookups ({details}). Some records marked '{NOT_FOUND}' may have a DOI; "

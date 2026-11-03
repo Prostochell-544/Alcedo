@@ -101,4 +101,4 @@ def test_unchecked_dois_stay_and_are_reported(project, registry, capsys):
     registry["answers"]["10.1234/x.2"] = requests.ConnectionError("down")
     assert cli.main(["--no-semantic-scholar", "--verify-dois"]) == 0
     assert "https://doi.org/10.1234/x.2" in (project / "alcedo_results.txt").read_text(encoding="utf-8")
-    assert "Could not check 1 DOIs" in capsys.readouterr().out
+    assert "Could not check 1 DOI" in capsys.readouterr().out

@@ -3,7 +3,9 @@
 ## Unreleased
 
 - A local cache of DOI lookups, so a repeated run does not look up the same records again. `--no-cache` turns it off.
-- Metadata for each DOI from OpenAlex and Crossref, the base for filters in 0.2.
+- `alcedo filter` narrows results by year, language, quartile and words, using no search quota. It writes the kept,
+  excluded and unknown records to separate files, each with the reason, and excludes papers marked as retracted.
+- Messages say "1 error" rather than "1 errors".
 
 ## 0.1.0 - 2026-11-02
 
