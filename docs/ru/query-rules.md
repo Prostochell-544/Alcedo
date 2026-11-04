@@ -149,6 +149,7 @@ alcedo --source openalex --pages 1 -i test.txt -o test_results.txt --overwrite
 alcedo setup               # выбрать способ поиска и сохранить ключ API
 alcedo check               # найти ошибки в запросах до запуска
 alcedo filter              # сузить результаты по году, языку, квартилю и словам
+alcedo export              # сохранить результаты в RIS и BibTeX для Zotero и ASReview
 alcedo                     # обычный запуск
 alcedo --resume            # продолжить после сбоя
 alcedo --overwrite         # заменить файл результатов и собрать всё заново
@@ -210,3 +211,18 @@ alcedo filter --year-from 2015 --language en --quartile Q1,Q2 --sjr scimagojr.cs
 Квартиль берётся из файла, который вы скачиваете сами: откройте страницу
 [Scimago journal rank](https://www.scimagojr.com/journalrank.php) и выберите **Download data**. В Alcedo этого файла нет. В разных
 областях у журнала могут быть разные квартили, Alcedo берёт лучший, поэтому при необходимости проверьте свою область сами.
+
+
+## 11. Как перенести результаты в менеджер ссылок
+
+`alcedo export` сохраняет записи в RIS и BibTeX: с авторами, журналом, годом, страницами и аннотациями. Zotero, Mendeley и
+EndNote читают оба формата, а ASReview для отбора статей читает RIS.
+
+```bash
+alcedo export
+```
+
+Если вы запускали `alcedo filter`, команда берёт `alcedo_filtered.csv`, а иначе весь файл результатов, и рядом с ним пишет
+`alcedo_filtered.ris` и `alcedo_filtered.bib`. Другой файл можно указать через `-i`, а только один формат через `--format ris`
+или `--format bibtex`. В каждой записи отмечено, какие запросы её нашли. У записей без DOI будет только название, и примерно у
+каждой десятой записи из OpenAlex нет аннотации.

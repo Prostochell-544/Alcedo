@@ -146,7 +146,8 @@ def judge(entry: Entry, args: argparse.Namespace, words: list[tuple[str, re.Patt
         if sjr is not None:
             entry.quartile = _best_quartile(record.get("issn") or [], sjr)
             if not record.get("issn"):
-                unknown.append("no ISSN")
+                # Dissertations, preprints and books often have no ISSN, so the type helps decide what to look at.
+                unknown.append(f"no ISSN ({record['type']})" if record.get("type") else "no ISSN")
             elif entry.quartile is None:
                 unknown.append("journal not in the SJR file")
             elif not entry.quartile:
@@ -221,7 +222,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 def run_filter(argv: list[str]) -> int:
     args = _parse_args(argv)
     if not args.input.exists():
-        print(f"Results file not found: {args.input}. Collect results first by running: alcedo", file=sys.stderr)
+        print(f"Results file not found: {args.input}. Run alcedo in this folder first, or name the file with -i.",
+              file=sys.stderr)
         return 1
     if not is_results_file(args.input):
         print(f"{args.input} has no Alcedo results.", file=sys.stderr)

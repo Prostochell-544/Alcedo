@@ -10,6 +10,7 @@ from pathlib import Path
 from . import __version__, setup_wizard
 from .check import run_check
 from .config import load_config
+from .export import run_export
 from .filters import run_filter
 from .pipeline import run
 
@@ -21,7 +22,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Collect DOIs from a list of literature search queries, grouped by query. "
                     "To set up API keys and see the search options, run: alcedo setup. "
                     "To find mistakes in your queries first, run: alcedo check. "
-                    "To narrow the results by year, language or quartile, run: alcedo filter",
+                    "To narrow the results by year, language or quartile, run: alcedo filter. "
+                    "To save them for Zotero or ASReview, run: alcedo export",
     )
     p.add_argument("--version", action="version", version=f"alcedo {__version__}")
     p.add_argument("-i", "--input", type=Path, default=Path("queries.txt"),
@@ -113,6 +115,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_check(argv[1:])
     if argv[:1] == ["filter"]:
         return run_filter(argv[1:])
+    if argv[:1] == ["export"]:
+        return run_export(argv[1:])
     args = parse_args(argv)
     decide_direct_search(args)
     return run(args)

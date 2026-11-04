@@ -103,7 +103,7 @@ def test_every_record_lands_in_one_list_with_its_reason(project, capsys):
 
     assert unknown["A paper without any DOI"]["reason"] == "no DOI"
     assert unknown["10.1234/notinsjr"]["reason"] == "journal not in the SJR file"
-    assert unknown["10.1234/noissn"]["reason"] == "no ISSN"
+    assert unknown["10.1234/noissn"]["reason"] == "no ISSN (article)"
     assert unknown["10.1234/noquartile"]["reason"] == "no quartile in the SJR file"
     assert unknown["10.1234/noyear"]["reason"] == "no year"
     assert unknown["10.1234/nolanguage"]["reason"] == "no language"

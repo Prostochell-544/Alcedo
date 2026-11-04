@@ -149,6 +149,7 @@ alcedo --source openalex --pages 1 -i test.txt -o test_results.txt --overwrite
 alcedo setup               # вибрати спосіб пошуку і зберегти ключ API
 alcedo check               # знайти помилки в запитах до запуску
 alcedo filter              # звузити результати за роком, мовою, квартилем і словами
+alcedo export              # зберегти результати в RIS і BibTeX для Zotero і ASReview
 alcedo                     # звичайний запуск
 alcedo --resume            # продовжити після збою
 alcedo --overwrite         # замінити файл результатів і зібрати все заново
@@ -210,3 +211,18 @@ alcedo filter --year-from 2015 --language en --quartile Q1,Q2 --sjr scimagojr.cs
 Квартиль береться з файлу, який ви завантажуєте самі: відкрийте сторінку
 [Scimago journal rank](https://www.scimagojr.com/journalrank.php) і виберіть **Download data**. В Alcedo цього файлу немає. У різних
 галузях журнал може мати різні квартилі, Alcedo бере найкращий, тому за потреби перевірте свою галузь самі.
+
+
+## 11. Як перенести результати до менеджера посилань
+
+`alcedo export` зберігає записи в RIS і BibTeX: з авторами, журналом, роком, сторінками й анотаціями. Zotero, Mendeley та
+EndNote читають обидва формати, а ASReview для відбору статей читає RIS.
+
+```bash
+alcedo export
+```
+
+Якщо ви запускали `alcedo filter`, команда бере `alcedo_filtered.csv`, а інакше весь файл результатів, і поруч із ним записує
+`alcedo_filtered.ris` і `alcedo_filtered.bib`. Інший файл можна вказати через `-i`, а лише один формат через `--format ris`
+або `--format bibtex`. У кожному записі зазначено, які запити його знайшли. У записів без DOI буде лише назва, і приблизно в
+кожного десятого запису з OpenAlex немає анотації.

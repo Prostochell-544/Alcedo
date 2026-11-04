@@ -126,6 +126,20 @@ The quartile comes from a file you download yourself: open the
 include this file. A journal can have different quartiles in different fields, and Alcedo uses the best one, so check
 the field yourself if it matters.
 
+## Export to a reference manager
+
+`alcedo export` writes the records as RIS and BibTeX, with authors, journal, year, pages and abstracts. Zotero, Mendeley
+and EndNote read both, and ASReview reads RIS for screening.
+
+```bash
+alcedo export
+```
+
+It takes `alcedo_filtered.csv` if you ran `alcedo filter`, and the whole results file otherwise, and writes
+`alcedo_filtered.ris` and `alcedo_filtered.bib` next to it. Use `-i` for another file and `--format ris` or
+`--format bibtex` for one format. Each record notes the queries that found it. Records without a DOI keep only their
+title, and about one in ten records from OpenAlex has no abstract.
+
 ## Which source to use
 
 With a working API key, a query uses only the API. Otherwise it uses the free sources together, in this order:
