@@ -1,13 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-11-04
+
+From a raw list of DOIs to a filtered list that a reference manager can read.
 
 - A local cache of DOI lookups, so a repeated run does not look up the same records again. `--no-cache` turns it off.
 - `alcedo filter` narrows results by year, language, quartile and words, using no search quota. It writes the kept,
   excluded and unknown records to separate files, each with the reason, and excludes papers marked as retracted.
 - `alcedo export` writes the filtered list, or any results file, as RIS and BibTeX, with authors, journal and
-  abstracts, for Zotero, Mendeley, EndNote and ASReview.
+  abstracts, for Zotero, Mendeley, EndNote and ASReview. Authors are written family name first, so Zotero splits and
+  sorts them correctly.
 - Messages say "1 error" rather than "1 errors".
+
+Known limits:
+
+- The quartile is the journal's best one across its fields. The SJR file is downloaded by the user.
+- Records without a DOI cannot be filtered by year, language or quartile, so they go to the unknown list.
+- Family names are guessed from the last word of a name, which can be wrong for some double family names.
+- The export was tested by importing RIS into Zotero. Mendeley, EndNote and ASReview were not tried.
 
 ## 0.1.0 - 2026-11-02
 

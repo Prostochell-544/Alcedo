@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "alcedo-lit"
 dynamic = ["version"]
-description = "Collect DOIs from a list of literature search queries, grouped by query."
+description = "Collect DOIs from a list of literature search queries, filter them and export them to reference managers."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "Alcedo contributors" }]
 keywords = ["literature search", "doi", "bibliometrics", "systematic review", "openalex", "semantic scholar",
-            "google scholar"]
+            "google scholar", "zotero", "ris", "bibtex", "scimago"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",

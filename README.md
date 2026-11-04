@@ -13,7 +13,8 @@
 
 Alcedo turns a list of literature search queries into DOIs grouped by query. Put your
 boolean queries in a file and run one command. The results are a text file with one
-block per query. There is no export to reference managers yet.
+block per query. Then narrow them by year, language and journal quartile, and export them
+to Zotero, Mendeley, EndNote or ASReview.
 
 **Status: alpha.** Options may change. See the [roadmap](https://github.com/Prostochell-544/Alcedo/blob/main/docs/ROADMAP.md) and the [changelog](https://github.com/Prostochell-544/Alcedo/blob/main/CHANGELOG.md).
 Documentation in other languages: [Russian](https://github.com/Prostochell-544/Alcedo/blob/main/docs/ru/query-rules.md), [Ukrainian](https://github.com/Prostochell-544/Alcedo/blob/main/docs/uk/query-rules.md).
@@ -29,6 +30,10 @@ Documentation in other languages: [Russian](https://github.com/Prostochell-544/A
 - Saves after every query. `--resume` continues after an interruption and collects failed queries again.
 - Writes a second file listing each DOI once, with the queries that found it. Papers found by the most queries come first.
 - With `--verify-dois`, checks every DOI in the doi.org registry and marks the ones that do not exist.
+- `alcedo filter` narrows the results by year, language, quartile and words, and explains every record it leaves out.
+  See [Filter the results](#filter-the-results).
+- `alcedo export` writes RIS and BibTeX for reference managers. See
+  [Export to a reference manager](#export-to-a-reference-manager).
 
 ## Install
 

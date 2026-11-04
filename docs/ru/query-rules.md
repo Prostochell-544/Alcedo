@@ -19,9 +19,12 @@ alcedo setup
 ```bash
 alcedo check
 alcedo
+alcedo filter --year-from 2015 --language en
+alcedo export
 ```
 
-`alcedo check` находит частые ошибки в запросах, не тратит квоту и не обращается к сети. `alcedo` пишет результат в
+`alcedo check` находит частые ошибки в запросах, не тратит квоту и не обращается к сети. `alcedo filter` сужает
+результаты (раздел 10), а `alcedo export` сохраняет их для Zotero, Mendeley, EndNote и ASReview (раздел 11). `alcedo` пишет результат в
 `alcedo_results.txt`. Существующий файл результатов он не заменит: продолжить его можно через `--resume`, начать заново
 через `--overwrite`.
 

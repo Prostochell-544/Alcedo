@@ -22,7 +22,7 @@ relevant results in our test, and free sources stay available for people who can
 - `alcedo check`: find mistakes before a run, such as lowercase `or`, `*`, guillemets, unbalanced brackets.
 - Documentation in English, Russian and Ukrainian. First release on PyPI as `alcedo-lit`.
 
-## 0.2: from a raw list to a filtered one
+## 0.2: from a raw list to a filtered one (released)
 
 - Metadata for each DOI from OpenAlex, with Crossref for what it lacks: title, year, journal, ISSN, language, type,
   retraction. Tested on 1,621 DOIs from real runs: year and language filled for 99-100%, ISSN for 85-91%.
@@ -33,10 +33,14 @@ relevant results in our test, and free sources stay available for people who can
 - Records with unknown data are kept apart as `unknown`, never dropped silently. In our runs about a quarter of the
   results from Google Scholar had no DOI.
 - An `excluded.csv` report that gives the reason for each excluded record.
-- Export to BibTeX and RIS, so that Zotero and ASReview can read the results.
+- Export to BibTeX and RIS, so that Zotero and ASReview can read the results. Authors are written family name
+  first, so Zotero splits them.
 
 ## 0.3 and later
 
+- A filter by record type, such as `--type article,review`: in a real run, a fifth of the records
+  without a quartile were dissertations and preprints.
+- Batch import of a filtered list straight into a Zotero library.
 - Russian and Ukrainian interface.
 - A query parser that translates one syntax for each source (idea: findpapers).
 - `--scope`: search titles and abstracts only, to reduce topic drift (idea: findpapers).
