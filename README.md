@@ -106,12 +106,16 @@ Read [how to write queries](https://github.com/Prostochell-544/Alcedo/blob/main/
 
 ## Filter the results
 
-`alcedo filter` narrows a results file by year, language, quartile and words. It uses no search quota, so you can
+`alcedo filter` narrows a results file by year, language, record type, quartile and words. It uses no search quota, so you can
 change the conditions as often as you like. It does look up each paper's data, in OpenAlex and then Crossref.
 
 ```bash
-alcedo filter --year-from 2015 --language en --quartile Q1,Q2 --sjr scimagojr.csv --exclude-word dental
+alcedo filter --year-from 2015 --language en --type article,review --quartile Q1,Q2 --sjr scimagojr.csv --exclude-word dental
 ```
+
+`--type` takes the record types to keep: article, review, preprint, book-chapter, dissertation, conference-paper and
+others; `alcedo filter --help` lists them all. With a quartile condition, it also clears the unknown list of
+dissertations, preprints and books, which have no journal quartile.
 
 It writes three lists, with the title, year, journal, quartile and authors of each record:
 

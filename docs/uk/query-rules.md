@@ -191,12 +191,17 @@ alcedo --help              # усі параметри
 
 ## 10. Як відфільтрувати результати
 
-`alcedo filter` звужує файл результатів за роком, мовою, квартилем і словами. Квоту пошуку він не витрачає, тому умови можна
+`alcedo filter` звужує файл результатів за роком, мовою, типом запису, квартилем і словами. Квоту пошуку він не витрачає, тому умови можна
 змінювати скільки завгодно. Дані про статті він запитує в OpenAlex, а потім у Crossref.
 
 ```bash
-alcedo filter --year-from 2015 --language en --quartile Q1,Q2 --sjr scimagojr.csv --exclude-word dental
+alcedo filter --year-from 2015 --language en --type article,review --quartile Q1,Q2 --sjr scimagojr.csv --exclude-word dental
 ```
+
+`--type` задає типи записів, які треба залишити: article (стаття), review (огляд), preprint (препринт), book-chapter
+(розділ книги), dissertation (дисертація), conference-paper (доповідь) та інші; повний список покаже
+`alcedo filter --help`. Разом з умовою за квартилем він заодно прибирає зі списку невідомих дисертації, препринти й
+книги, у яких квартилю журналу не буває.
 
 Вийде три списки, у кожному назва, рік, журнал, квартиль і автори:
 

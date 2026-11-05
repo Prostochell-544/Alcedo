@@ -43,8 +43,8 @@ relevant results in our test, and free sources stay available for people who can
 - Done: two-pass deduplication, by DOI, then by title and year (idea: findpapers). One work can carry several DOIs, such as
   a preprint and the article it became. The article is kept, and the preprint is listed as a repeat. Only exact
   matches are joined; similar titles are shown for a person to decide.
-- A filter by record type, such as `--type article,review`: in a real run, about half of the records without a
-  quartile were dissertations, preprints and book chapters.
+- Done: a filter by record type, such as `--type article,review`. In a real run it cut the records with unknown
+  data from 203 to 94.
 - Links to legal open-access copies through OpenAlex, in the lists and the exports, and a `no_access.csv` of papers
   with no open copy, for interlibrary loan or asking the authors (idea: paper-qa).
 - Preparation for the interface in 0.4: the search reports its progress and problems as events, separate from what

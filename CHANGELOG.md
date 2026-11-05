@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `alcedo filter --type article,review` keeps only these record types. Others include preprint, book-chapter,
+  dissertation and conference-paper. In a 1,426-record run it cut the records with unknown data from 203 to 94,
+  because most of them were dissertations, preprints and book chapters, which have no journal quartile.
 - `alcedo filter` finds the same work under different DOIs: a preprint and the article it became, or two editions
   of one paper. It keeps the published version, adds the queries that found the repeat, and lists the repeats in
   `alcedo_duplicates.csv`. Titles that are close but not the same are only marked, in a `similar_to` column, for you

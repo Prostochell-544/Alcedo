@@ -170,6 +170,31 @@ def test_several_languages_and_case(project):
     assert "10.1234/german" in rows(project / "alcedo_filtered.csv")
 
 
+def test_type_keeps_the_types_asked_for(project, monkeypatch):
+    papers = {**PAPERS, "10.1234/old": {**paper(), "type": "dissertation"}, "10.1234/low": {**paper(), "type": None},
+              "10.1234/german": {**paper(), "type": "journal-article"}}
+    monkeypatch.setattr(filters, "fetch_metadata", lambda dois, args, cache=None: (papers, []))
+    assert run("--type", "Article, review") == 0
+    assert rows(project / "alcedo_excluded.csv")["10.1234/old"]["reason"] == "type dissertation"
+    assert rows(project / "alcedo_unknown.csv")["10.1234/low"]["reason"] == "no type"
+    assert "10.1234/german" in rows(project / "alcedo_filtered.csv")  # the Crossref name for an article
+
+
+def test_crossref_names_are_accepted_for_type(project, monkeypatch):
+    papers = {**PAPERS, "10.1234/old": {**paper(), "type": "preprint"}}
+    monkeypatch.setattr(filters, "fetch_metadata", lambda dois, args, cache=None: (papers, []))
+    assert run("--type", "posted-content") == 0
+    assert "10.1234/old" in rows(project / "alcedo_filtered.csv")
+
+
+def test_an_unknown_type_is_explained(project, capsys):
+    with pytest.raises(SystemExit):
+        run("--type", "articles")
+    err = capsys.readouterr().err
+    assert "does not know articles" in err
+    assert "book-chapter" in err
+
+
 def test_quartile_is_shown_for_kept_records_and_lowercase_is_accepted(project):
     assert run("--quartile", "q1", "--sjr", "sjr.csv") == 0
     assert rows(project / "alcedo_filtered.csv")["10.1234/keep"]["quartile"] == "Q1"

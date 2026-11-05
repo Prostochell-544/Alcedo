@@ -33,6 +33,12 @@ MIN_TITLE_WORDS = 4
 SIMILAR_TITLE_RATIO = 0.9
 SIMILAR_WORDS_SHARE = 0.6
 PREPRINT_TYPES = {"preprint", "posted-content"}
+# OpenAlex names, with the Crossref names that mean the same thing. Crossref answers only when OpenAlex has no record.
+RECORD_TYPES = {"article", "review", "preprint", "book", "book-chapter", "dissertation", "conference-paper",
+                "conference-abstract", "report", "dataset", "editorial", "letter", "erratum", "retraction",
+                "reference-entry", "standard", "paratext", "peer-review", "supplementary-materials", "other"}
+CROSSREF_TYPE_NAMES = {"journal-article": "article", "posted-content": "preprint", "proceedings-article":
+                       "conference-paper", "monograph": "book", "edited-book": "book", "reference-book": "book"}
 
 
 @dataclass
@@ -209,6 +215,12 @@ def judge(entry: Entry, args: argparse.Namespace, words: list[tuple[str, re.Patt
                 unknown.append("no language")
             elif language not in args.language:
                 excluded.append(f"language {language}")
+        if args.type:
+            kind = CROSSREF_TYPE_NAMES.get(record.get("type") or "", record.get("type"))
+            if not kind:
+                unknown.append("no type")
+            elif kind not in args.type:
+                excluded.append(f"type {kind}")
         if sjr is not None:
             entry.quartile = _best_quartile(record.get("issn") or [], sjr)
             if not record.get("issn"):
@@ -251,7 +263,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     config = load_config()
     p = argparse.ArgumentParser(
         prog="alcedo filter",
-        description="Narrow collected results by year, language, quartile and words. Uses no search quota. "
+        description="Narrow collected results by year, language, type, quartile and words. Uses no search quota. "
                     "Records with missing data go to a separate list instead of being dropped.")
     p.add_argument("-i", "--input", type=Path, default=Path("alcedo_results.txt"),
                    help="results file to filter (default: alcedo_results.txt)")
@@ -260,6 +272,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--year-from", type=int, help="keep papers from this year on")
     p.add_argument("--year-to", type=int, help="keep papers up to this year")
     p.add_argument("--language", help="keep these languages, as two-letter codes separated by commas, such as en,ru")
+    p.add_argument("--type", help="keep these record types, such as article,review; others include preprint, "
+                                  "book-chapter, dissertation and conference-paper")
     p.add_argument("--quartile", help="keep these quartiles, such as Q1,Q2; needs --sjr")
     p.add_argument("--sjr", type=Path, help=f"journal rank file you downloaded from {SJR_DOWNLOAD_PAGE}")
     p.add_argument("--exclude-word", action="append", default=[], metavar="WORD",
@@ -282,6 +296,12 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
             p.error("--quartile takes Q1, Q2, Q3 or Q4, separated by commas")
     if args.language:
         args.language = {code.strip().lower() for code in args.language.split(",") if code.strip()}
+    if args.type:
+        args.type = {CROSSREF_TYPE_NAMES.get(kind, kind) for kind in
+                     (k.strip().lower() for k in args.type.split(",")) if kind}
+        if unknown_types := args.type - RECORD_TYPES:
+            p.error(f"--type does not know {', '.join(sorted(unknown_types))}. "
+                    f"Types: {', '.join(sorted(RECORD_TYPES))}")
     return args
 
 
