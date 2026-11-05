@@ -30,6 +30,7 @@ venv/
 /*_filtered.csv
 /*_excluded.csv
 /*_unknown.csv
+/*_duplicates.csv
 /alcedo_*.ris
 /alcedo_*.bib
 !/alcedo_results.txt

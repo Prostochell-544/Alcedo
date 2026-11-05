@@ -11,13 +11,14 @@ import csv
 import os
 import re
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from .cache import Cache
 from .config import load_config
-from .doi import doi_url, normalize_title
+from .doi import PREPRINT_DOI_RE, doi_url, normalize_title
 from .metadata import fetch_metadata
 from .results import ERROR_PREFIX, NOT_FOUND, NOT_REGISTERED, counted, doi_of_line, is_results_file, read_blocks
 
@@ -26,7 +27,12 @@ SJR_QUARTILE_COLUMN = "sjr best quartile"
 SJR_DOWNLOAD_PAGE = "https://www.scimagojr.com/journalrank.php"
 QUARTILES = ("Q1", "Q2", "Q3", "Q4")
 COLUMNS = ["doi", "url", "title", "year", "journal", "issn", "language", "type", "quartile", "retracted", "authors",
-           "found_by_queries", "queries", "reason"]
+           "found_by_queries", "queries", "similar_to", "reason"]
+# Short titles such as "Editorial" or "Kingfisher" belong to many different works, so they are never joined.
+MIN_TITLE_WORDS = 4
+SIMILAR_TITLE_RATIO = 0.9
+SIMILAR_WORDS_SHARE = 0.6
+PREPRINT_TYPES = {"preprint", "posted-content"}
 
 
 @dataclass
@@ -41,6 +47,18 @@ class Entry:
     checked: bool = True
     quartile: str | None = None
     reasons: list[str] = field(default_factory=list)
+    similar: list[str] = field(default_factory=list)
+
+    @property
+    def year(self) -> int | None:
+        return (self.record or {}).get("year")
+
+    @property
+    def label(self) -> str:
+        return self.doi or self.title or ""
+
+    def is_preprint(self) -> bool:
+        return (self.record or {}).get("type") in PREPRINT_TYPES or bool(self.doi and PREPRINT_DOI_RE.match(self.doi))
 
 
 def read_entries(path: Path) -> tuple[list[Entry], int]:
@@ -77,6 +95,54 @@ def merge_found_titles(entries: list[Entry]) -> list[Entry]:
         else:
             same.queries.extend(q for q in entry.queries if q not in same.queries)
     return merged
+
+
+def _title_key(entry: Entry) -> str | None:
+    key = normalize_title(entry.title or "")
+    return key if len(key.split()) >= MIN_TITLE_WORDS else None
+
+
+def remove_duplicates(entries: list[Entry]) -> tuple[list[Entry], list[Entry]]:
+    """Join records that are the same work under different DOIs. Returns (records to keep, the repeats).
+
+    A record is a repeat when its title is exactly the same and either the year is the same or it is a preprint: a
+    preprint and the article it became often differ by a year. The published version is kept, then the one found by
+    more queries. Records with the same title in different years, both published, are left apart and marked as similar.
+    """
+    groups: dict[str, list[Entry]] = defaultdict(list)
+    for entry in entries:
+        if key := _title_key(entry):
+            groups[key].append(entry)
+    repeats = []
+    for group in groups.values():
+        keep, *others = sorted(group, key=lambda e: (e.is_preprint(), -len(e.queries), e.record is None))
+        for other in others:
+            if other.is_preprint() or other.year is None or keep.year is None or other.year == keep.year:
+                keep.queries.extend(q for q in other.queries if q not in keep.queries)
+                other.reasons = [f"same work as {keep.label}" + (" (this one is a preprint)" if other.is_preprint()
+                                                                  else "")]
+                repeats.append(other)
+    repeated = {id(e) for e in repeats}
+    return [e for e in entries if id(e) not in repeated], repeats
+
+
+def mark_similar(entries: list[Entry]) -> int:
+    """Mark records whose titles are close, in the same or the next year, for a person to check. Returns how many."""
+    by_year: dict[int | None, list[tuple[str, set[str], Entry]]] = defaultdict(list)
+    for entry in entries:
+        if key := _title_key(entry):
+            by_year[entry.year].append((key, set(key.split()), entry))
+    for year, items in by_year.items():
+        later = by_year.get(year + 1, []) if year is not None else []
+        for i, (key, words, entry) in enumerate(items):
+            for other_key, other_words, other in items[i + 1:] + later:
+                # Comparing the sets of words first is far cheaper, and close titles share most of their words.
+                if len(words & other_words) < SIMILAR_WORDS_SHARE * len(words | other_words):
+                    continue
+                if SequenceMatcher(None, key, other_key).ratio() >= SIMILAR_TITLE_RATIO:
+                    entry.similar.append(other.label)
+                    other.similar.append(entry.label)
+    return sum(bool(e.similar) for e in entries)
 
 
 def normalize_issn(issn: str) -> str:
@@ -178,7 +244,7 @@ def _write(path: Path, entries: list[Entry]) -> None:
                              r.get("language") or "", r.get("type") or "", e.quartile or "",
                              "" if r.get("retracted") is None else r["retracted"],
                              ", ".join(filter(None, r.get("authors") or [])), len(e.queries), " | ".join(e.queries),
-                             "; ".join(e.reasons)])
+                             "; ".join(e.similar), "; ".join(e.reasons)])
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -252,6 +318,9 @@ def run_filter(argv: list[str]) -> int:
             if entry.record:
                 entry.title = entry.record.get("title")
     entries = merge_found_titles(entries)
+    total = len(entries)
+    entries, repeats = remove_duplicates(entries)
+    similar = mark_similar(entries)
 
     words = [(word, re.compile(rf"(?<!\w){re.escape(word)}(?!\w)", re.I)) for word in args.exclude_word]
     groups: dict[str, list[Entry]] = {"kept": [], "excluded": [], "unknown": []}
@@ -260,7 +329,8 @@ def run_filter(argv: list[str]) -> int:
 
     stem = args.output or str(args.input.with_name(args.input.stem.removesuffix("_results")))
     paths = {"kept": Path(f"{stem}_filtered.csv"), "excluded": Path(f"{stem}_excluded.csv"),
-             "unknown": Path(f"{stem}_unknown.csv")}
+             "unknown": Path(f"{stem}_unknown.csv"), "duplicates": Path(f"{stem}_duplicates.csv")}
+    groups["duplicates"] = repeats
     try:
         for name, path in paths.items():
             _write(path, groups[name])
@@ -269,13 +339,16 @@ def run_filter(argv: list[str]) -> int:
               file=sys.stderr)
         return 1
 
-    print(f"Records: {len(entries)}. Kept: {len(groups['kept'])}. Excluded: {len(groups['excluded'])}. "
-          f"Unknown: {len(groups['unknown'])}.")
+    print(f"Records: {total}. Repeats of the same work: {len(repeats)}. Kept: {len(groups['kept'])}. "
+          f"Excluded: {len(groups['excluded'])}. Unknown: {len(groups['unknown'])}.")
     for name, label in (("excluded", "Excluded"), ("unknown", "Unknown")):
         reasons = Counter(re.sub(r"\byear \d+", "year", reason) for e in groups[name] for reason in e.reasons)
         if reasons:
             print(f"{label}, by reason: " + ", ".join(f"{reason} ({count})" for reason, count in reasons.most_common()))
-    print(f"Files: {paths['kept']}, {paths['excluded']}, {paths['unknown']}")
+    print("Files: " + ", ".join(map(str, paths.values())))
+    if similar:
+        print(f"{counted(similar, 'record')} have a similar title to another one. They may be the same work: "
+              "see the similar_to column.")
     if groups["unknown"]:
         print("Check the unknown list by hand: these records may well meet your conditions.")
     if failed:

@@ -112,7 +112,8 @@ def test_every_record_lands_in_one_list_with_its_reason(project, capsys):
 
     assert len(kept) + len(excluded) + len(unknown) == 16
     out = capsys.readouterr().out
-    assert f"Records: 16. Kept: {len(kept)}. Excluded: {len(excluded)}. Unknown: {len(unknown)}." in out
+    summary = f"Kept: {len(kept)}. Excluded: {len(excluded)}. Unknown: {len(unknown)}."
+    assert f"Records: 16. Repeats of the same work: 0. {summary}" in out
     assert "Check the unknown list by hand" in out
     assert "Could not check 1 DOI." in out
 

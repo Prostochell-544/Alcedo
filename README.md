@@ -120,6 +120,13 @@ It writes three lists, with the title, year, journal, quartile and authors of ea
 | `alcedo_filtered.csv` | Records that meet all the conditions |
 | `alcedo_excluded.csv` | Records that fail a condition, each with the reason |
 | `alcedo_unknown.csv` | Records whose data is missing, each with the reason. Check these by hand, because they may well fit |
+| `alcedo_duplicates.csv` | Repeats of a work that is already in the lists under another DOI |
+
+A repeat has exactly the same title as another record and either the same year or is a preprint, because a preprint
+and the article it became often differ by a year. The published version stays in the lists, with the queries that found
+both. Titles that are close but not the same, such as one starting with "Reprint of:", are only marked in the
+`similar_to` column, because they can be different works. Titles under four words, such as "Editorial", are never
+joined.
 
 Nothing is dropped silently. Records without a DOI always go to the unknown list, unless an excluded word appears in the
 title. Papers marked as retracted are excluded unless you add `--keep-retracted`, though only OpenAlex reports this.
