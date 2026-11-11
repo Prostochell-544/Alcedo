@@ -125,12 +125,24 @@ It writes three lists, with the title, year, journal, quartile and authors of ea
 | `alcedo_excluded.csv` | Records that fail a condition, each with the reason |
 | `alcedo_unknown.csv` | Records whose data is missing, each with the reason. Check these by hand, because they may well fit |
 | `alcedo_duplicates.csv` | Repeats of a work that is already in the lists under another DOI |
+| `alcedo_no_access.csv` | Kept papers with no legal open copy, for interlibrary loan or to ask the authors |
+| `alcedo_selection_log.md` | Counts at every step, with the numbers for a PRISMA 2020 flow diagram |
 
 A repeat has exactly the same title as another record and either the same year or is a preprint, because a preprint
 and the article it became often differ by a year. The published version stays in the lists, with the queries that found
 both. Titles that are close but not the same, such as one starting with "Reprint of:", are only marked in the
 `similar_to` column, because they can be different works. Titles under four words, such as "Editorial", are never
 joined.
+
+The `open_access` and `open_access_url` columns show whether a legal free copy exists and where, as OpenAlex reports
+it: gold, diamond, hybrid and bronze copies are at the publisher, green ones in a repository. A green copy is often the
+accepted manuscript, which can differ from the published paper. Records that only Crossref knows have no open access
+data. Alcedo links to these copies and does not download papers.
+
+The selection log records the conditions, the date and the Alcedo version, and counts the records at every step: found
+by each source, duplicates removed, excluded with the reasons, left to check by hand, and kept. Its last section gives
+the numbers for the identification part of a PRISMA 2020 flow diagram, where Alcedo counts as an automation tool.
+Screening titles, abstracts and full texts is done by people, so record those numbers yourself.
 
 Nothing is dropped silently. Records without a DOI always go to the unknown list, unless an excluded word appears in the
 title. Papers marked as retracted are excluded unless you add `--keep-retracted`, though only OpenAlex reports this.

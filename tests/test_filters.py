@@ -206,6 +206,19 @@ def test_excluded_words_match_whole_words_and_phrases(project, word, excluded):
     assert ("10.1234/dental" in rows(project / "alcedo_excluded.csv")) is excluded
 
 
+def test_kept_papers_without_an_open_copy_are_listed(project, monkeypatch, capsys):
+    papers = {**PAPERS,
+              "10.1234/keep": {**PAPERS["10.1234/keep"], "open_access": "closed", "open_access_url": None},
+              "10.1234/old": {**paper(), "open_access": "gold", "open_access_url": "https://x.org/old.pdf"}}
+    monkeypatch.setattr(filters, "fetch_metadata", lambda dois, args, cache=None: (papers, []))
+    assert run() == 0
+    assert set(rows(project / "alcedo_no_access.csv")) == {"10.1234/keep"}
+    kept = rows(project / "alcedo_filtered.csv")
+    assert kept["10.1234/old"]["open_access"] == "gold"
+    assert kept["10.1234/old"]["open_access_url"] == "https://x.org/old.pdf"
+    assert "have a legal open copy and 1 have none" in capsys.readouterr().out
+
+
 def test_a_file_name_can_be_chosen(project):
     assert run("-o", "my") == 0
     assert (project / "my_filtered.csv").exists()

@@ -20,13 +20,15 @@ from .cache import Cache
 from .config import load_config
 from .doi import PREPRINT_DOI_RE, doi_url, normalize_title
 from .metadata import fetch_metadata
+from .prisma import count_found, write_log
 from .results import ERROR_PREFIX, NOT_FOUND, NOT_REGISTERED, counted, doi_of_line, is_results_file, read_blocks
 
 SJR_ISSN_COLUMN = "issn"
 SJR_QUARTILE_COLUMN = "sjr best quartile"
 SJR_DOWNLOAD_PAGE = "https://www.scimagojr.com/journalrank.php"
 QUARTILES = ("Q1", "Q2", "Q3", "Q4")
-COLUMNS = ["doi", "url", "title", "year", "journal", "issn", "language", "type", "quartile", "retracted", "authors",
+COLUMNS = ["doi", "url", "title", "year", "journal", "issn", "language", "type", "quartile", "retracted",
+           "open_access", "open_access_url", "authors",
            "found_by_queries", "queries", "similar_to", "reason"]
 # Short titles such as "Editorial" or "Kingfisher" belong to many different works, so they are never joined.
 MIN_TITLE_WORDS = 4
@@ -255,6 +257,7 @@ def _write(path: Path, entries: list[Entry]) -> None:
                              r.get("year") or "", r.get("journal") or "", ", ".join(r.get("issn") or []),
                              r.get("language") or "", r.get("type") or "", e.quartile or "",
                              "" if r.get("retracted") is None else r["retracted"],
+                             r.get("open_access") or "", r.get("open_access_url") or "",
                              ", ".join(filter(None, r.get("authors") or [])), len(e.queries), " | ".join(e.queries),
                              "; ".join(e.similar), "; ".join(e.reasons)])
 
@@ -337,6 +340,7 @@ def run_filter(argv: list[str]) -> int:
             entry.checked = key not in unchecked
             if entry.record:
                 entry.title = entry.record.get("title")
+    unique_before = len(entries)
     entries = merge_found_titles(entries)
     total = len(entries)
     entries, repeats = remove_duplicates(entries)
@@ -349,11 +353,16 @@ def run_filter(argv: list[str]) -> int:
 
     stem = args.output or str(args.input.with_name(args.input.stem.removesuffix("_results")))
     paths = {"kept": Path(f"{stem}_filtered.csv"), "excluded": Path(f"{stem}_excluded.csv"),
-             "unknown": Path(f"{stem}_unknown.csv"), "duplicates": Path(f"{stem}_duplicates.csv")}
+             "unknown": Path(f"{stem}_unknown.csv"), "duplicates": Path(f"{stem}_duplicates.csv"),
+             "no_access": Path(f"{stem}_no_access.csv")}
     groups["duplicates"] = repeats
+    # Kept papers that OpenAlex knows have no free legal copy: for interlibrary loan, or to ask the authors.
+    groups["no_access"] = [e for e in groups["kept"] if (e.record or {}).get("open_access") == "closed"]
+    log_path = Path(f"{stem}_selection_log.md")
     try:
         for name, path in paths.items():
             _write(path, groups[name])
+        write_log(log_path, args, count_found(args.input), unique_before, unique_before - total, groups, paths)
     except OSError as exc:
         print(f"Cannot write {exc.filename}: {exc.strerror}. If it is open in Excel, close it and run again.",
               file=sys.stderr)
@@ -366,6 +375,10 @@ def run_filter(argv: list[str]) -> int:
         if reasons:
             print(f"{label}, by reason: " + ", ".join(f"{reason} ({count})" for reason, count in reasons.most_common()))
     print("Files: " + ", ".join(map(str, paths.values())))
+    print(f"Selection log, with the numbers for a PRISMA flow diagram: {log_path}")
+    open_copy = sum(bool((e.record or {}).get("open_access_url")) for e in groups["kept"])
+    print(f"Of the kept records, {open_copy} have a legal open copy and {len(groups['no_access'])} have none "
+          f"({paths['no_access']}). For the rest, it is not known.")
     if similar:
         print(f"{counted(similar, 'record')} have a similar title to another one. They may be the same work: "
               "see the similar_to column.")

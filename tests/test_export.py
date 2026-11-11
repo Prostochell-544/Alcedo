@@ -45,6 +45,21 @@ def test_a_record_without_data_keeps_its_title():
     assert bib == "@misc{anononly,\n  title = {Only a title}\n}\n"
 
 
+def test_an_open_copy_is_linked_with_its_version():
+    record = {**PAPER, "open_access": "green", "open_access_url": "https://repo.org/a.pdf",
+              "open_access_pdf": "https://repo.org/a.pdf", "open_access_version": "acceptedVersion"}
+    ris = ris_entry(ITEM, record)
+    assert "L1  - https://repo.org/a.pdf\n" in ris
+    assert "N1  - Open copy (green, accepted manuscript): https://repo.org/a.pdf\n" in ris
+    assert "Open copy (green, accepted manuscript): https://repo.org/a.pdf" in bibtex_entry(ITEM, record, set())
+
+
+def test_a_closed_paper_has_no_open_copy_note():
+    record = {**PAPER, "open_access": "closed", "open_access_url": None}
+    assert "Open copy" not in ris_entry(ITEM, record)
+    assert "L1  -" not in ris_entry(ITEM, record)
+
+
 def test_a_retracted_paper_says_so():
     assert "N1  - Retracted, according to OpenAlex" in ris_entry(ITEM, {**PAPER, "retracted": True})
     assert "Retracted, according to OpenAlex" in bibtex_entry(ITEM, {**PAPER, "retracted": True}, set())

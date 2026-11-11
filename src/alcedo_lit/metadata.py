@@ -19,9 +19,9 @@ from .sources.openalex import OPENALEX_URL
 BATCH_SIZE = 50
 FOUND_MAX_AGE_DAYS = 30  # short, because a paper can be retracted later
 NOT_FOUND_MAX_AGE_DAYS = 7
-CACHE_KIND = "metadata-1"
+CACHE_KIND = "metadata-2"  # the number changes when records gain fields, so older cached records are fetched again
 OPENALEX_FIELDS = ("doi,title,publication_year,language,type,is_retracted,primary_location,authorships,biblio,"
-                   "abstract_inverted_index")
+                   "abstract_inverted_index,open_access,best_oa_location")
 
 
 def _abstract_text(inverted: dict | None) -> str | None:
@@ -35,6 +35,8 @@ def record_from_openalex(work: dict) -> dict:
     source = (work.get("primary_location") or {}).get("source") or {}
     biblio = work.get("biblio") or {}
     first, last = biblio.get("first_page"), biblio.get("last_page")
+    access = work.get("open_access") or {}
+    best = work.get("best_oa_location") or {}
     return {
         "title": work.get("title"),
         "year": work.get("publication_year"),
@@ -48,6 +50,11 @@ def record_from_openalex(work: dict) -> dict:
         "issue": biblio.get("issue"),
         "pages": f"{first}-{last}" if first and last and first != last else first,
         "abstract": _abstract_text(work.get("abstract_inverted_index")),
+        # gold, diamond, green, hybrid, bronze or closed, as OpenAlex names them
+        "open_access": access.get("oa_status"),
+        "open_access_url": best.get("pdf_url") or best.get("landing_page_url") or access.get("oa_url"),
+        "open_access_pdf": best.get("pdf_url"),
+        "open_access_version": best.get("version"),
         "source": "OpenAlex",
     }
 
@@ -71,6 +78,11 @@ def record_from_crossref(message: dict) -> dict:
         "issue": message.get("issue"),
         "pages": message.get("page"),
         "abstract": html.unescape(re.sub(r"<[^>]+>", "", abstract)).strip() if abstract else None,
+        # Crossref does not say whether a free copy exists, so open access stays unknown.
+        "open_access": None,
+        "open_access_url": None,
+        "open_access_pdf": None,
+        "open_access_version": None,
         "source": "Crossref",
     }
 

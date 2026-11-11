@@ -22,6 +22,9 @@ WORK = {
     "authorships": [{"author": {"display_name": "A Author"}}, {"author": {"display_name": "B Author"}}],
     "biblio": {"volume": "5", "issue": "2", "first_page": "10", "last_page": "20"},
     "abstract_inverted_index": {"Hello": [0], "again": [2], "world": [1]},
+    "open_access": {"is_oa": True, "oa_status": "green", "oa_url": "https://repo.org/a"},
+    "best_oa_location": {"pdf_url": "https://repo.org/a.pdf", "landing_page_url": "https://repo.org/a",
+                         "version": "acceptedVersion"},
 }
 CROSSREF = {
     "title": ["Paper B"],
@@ -45,7 +48,21 @@ def test_openalex_record():
     assert record_from_openalex(WORK) == {
         "title": "Paper A", "year": 2020, "journal": "Journal", "issn": ["1111-1111", "2222-2222"], "language": "en",
         "type": "article", "retracted": False, "authors": ["A Author", "B Author"], "volume": "5", "issue": "2",
-        "pages": "10-20", "abstract": "Hello world again", "source": "OpenAlex"}
+        "pages": "10-20", "abstract": "Hello world again", "open_access": "green",
+        "open_access_url": "https://repo.org/a.pdf", "open_access_pdf": "https://repo.org/a.pdf",
+        "open_access_version": "acceptedVersion", "source": "OpenAlex"}
+
+
+def test_open_access_falls_back_to_the_landing_page_and_closed_has_no_link():
+    landing = record_from_openalex({**WORK, "best_oa_location": {"landing_page_url": "https://repo.org/a"}})
+    assert (landing["open_access_url"], landing["open_access_pdf"]) == ("https://repo.org/a", None)
+    closed = record_from_openalex({**WORK, "open_access": {"is_oa": False, "oa_status": "closed"},
+                                   "best_oa_location": None})
+    assert (closed["open_access"], closed["open_access_url"]) == ("closed", None)
+
+
+def test_crossref_does_not_guess_open_access():
+    assert record_from_crossref(CROSSREF)["open_access"] is None
 
 
 def test_openalex_record_with_little_data():

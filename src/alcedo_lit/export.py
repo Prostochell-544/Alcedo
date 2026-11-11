@@ -77,6 +77,17 @@ def last_first(name: str) -> str:
     return f"{family}, {given}" + (f", {suffix}" if suffix else "")
 
 
+def open_access_note(record: dict) -> str | None:
+    """Describe the legal open copy OpenAlex knows, with its version, because an accepted manuscript can differ."""
+    url, status = record.get("open_access_url"), record.get("open_access")
+    if not url or status == "closed":
+        return None
+    version = {"publishedVersion": "published version", "acceptedVersion": "accepted manuscript",
+               "submittedVersion": "submitted manuscript"}.get(record.get("open_access_version") or "")
+    details = ", ".join(filter(None, (status, version)))
+    return f"Open copy ({details}): {url}" if details else f"Open copy: {url}"
+
+
 def ris_entry(item: dict, record: dict | None) -> str:
     record = record or {}
     kind = RIS_TYPES.get(record.get("type") or "", "GEN") if record else ("JOUR" if item["doi"] else "GEN")
@@ -87,9 +98,11 @@ def ris_entry(item: dict, record: dict | None) -> str:
               ("IS", record.get("issue")), ("SP", first), ("EP", last),
               ("SN", (record.get("issn") or [None])[0]), ("LA", record.get("language")),
               ("DO", item["doi"]), ("UR", doi_url(item["doi"]) if item["doi"] else None),
-              ("AB", record.get("abstract"))]
+              ("L1", record.get("open_access_pdf")), ("AB", record.get("abstract"))]
     if record.get("retracted"):
         lines.append(("N1", "Retracted, according to OpenAlex"))
+    if note := open_access_note(record):
+        lines.append(("N1", note))
     if item["queries"]:
         lines.append(("N1", "Found by Alcedo queries: " + " | ".join(item["queries"])))
     lines.append(("ER", ""))
@@ -136,6 +149,7 @@ def bibtex_entry(item: dict, record: dict | None, used: set[str]) -> str:
     kind = BIBTEX_TYPES[RIS_TYPES.get(record.get("type") or "", "GEN") if record else "GEN"]
     first, last = _page_range(record.get("pages"))
     notes = (["Retracted, according to OpenAlex"] if record.get("retracted") else []) + (
+        [open_access_note(record)] if open_access_note(record) else []) + (
         ["Found by Alcedo queries: " + " | ".join(item["queries"])] if item["queries"] else [])
     fields = [
         ("title", record.get("title") or item["title"]),
