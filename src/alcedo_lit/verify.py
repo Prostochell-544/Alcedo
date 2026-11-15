@@ -8,6 +8,7 @@ import requests
 from tqdm import tqdm
 
 from .doi import encode_doi
+from .events import on_terminal
 from .net import SESSION, api_headers
 from .results import NOT_REGISTERED, doi_of_line
 
@@ -42,7 +43,8 @@ def verify_results(results: dict[str, list[str]], timeout: float) -> tuple[int, 
 
     with ThreadPoolExecutor(WORKERS) as pool:
         answers = pool.map(lambda doi: doi_exists(doi, timeout), dois.values())
-        progress = tqdm(answers, total=len(dois), desc="  checking DOIs", unit="doi", leave=False)
+        progress = tqdm(answers, total=len(dois), desc="  checking DOIs", unit="doi", leave=False,
+                        disable=not on_terminal())
         status = dict(zip(dois, progress, strict=True))
 
     for query, lines in results.items():

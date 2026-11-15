@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- For developers: the search reports its progress, problems and final counts as events, which another program, such
+  as the interface planned for 0.4, can listen to. The command line prints exactly what it printed before.
 - `alcedo filter` writes a selection log, `alcedo_selection_log.md`: records found by each source, duplicates
   removed, records excluded and why, records to check by hand, and access to the kept papers. Its last section gives
   the numbers for the identification part of a PRISMA 2020 flow diagram.

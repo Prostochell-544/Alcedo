@@ -4,16 +4,14 @@ from __future__ import annotations
 
 import argparse
 import math
-import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from tqdm import tqdm
-
 from .cache import Cache
 from .check import queries_with_problems
 from .doi import normalize_title
+from .events import FINISHED, NOTE, NOTICE, PROBLEM, Progress, emit
 from .resolve import failed_lookups, resolve_dois
 from .results import (
     DIRECT_LABEL,
@@ -83,14 +81,14 @@ def source_label(args: argparse.Namespace, apis: list[Backend], semantic: Backen
     return " then ".join([*names, " + ".join(free)])
 
 
-def pause_before_scholar(args: argparse.Namespace, bar: tqdm) -> None:
+def pause_before_scholar(args: argparse.Namespace, bar: Progress) -> None:
     end = time.monotonic() + args.delay
     while (left := end - time.monotonic()) > 0:
         bar.set_postfix_str(f"waiting {left:.0f} s")
         time.sleep(min(1.0, left))
 
 
-def _page_reporter(bar: tqdm, query: str):
+def _page_reporter(bar: Progress, query: str):
     def show_page(done: int) -> None:
         bar.set_postfix_str(f"{shorten(query, 40)} | page {done + 1}")
 
@@ -99,7 +97,7 @@ def _page_reporter(bar: tqdm, query: str):
 
 def _note_few_results(query: str, source: str, count: int) -> None:
     if count < FEW_RESULTS:
-        tqdm.write(f"[i] {source} found only {counted(count, 'result')} for '{shorten(query)}'. "
+        emit(NOTE, f"[i] {source} found only {counted(count, 'result')} for '{shorten(query)}'. "
                    "The query may be narrow, or the list may be incomplete.")
 
 
@@ -133,7 +131,7 @@ def _not_in(pubs: list[dict], known: set[str]) -> list[dict]:
     return [pub for pub in pubs if normalize_title(pub.get("title") or "") not in known]
 
 
-def _ask(backend: Backend, query: str, args: argparse.Namespace, bar: tqdm) -> tuple[list[dict], str | None]:
+def _ask(backend: Backend, query: str, args: argparse.Namespace, bar: Progress) -> tuple[list[dict], str | None]:
     """Ask one source. Returns (results, why it failed), and turns the source off when it should not be asked again."""
     bar.set_postfix_str(shorten(query))
     pubs, error, stop_using = backend.search(query, args, _page_reporter(bar, query))
@@ -143,15 +141,15 @@ def _ask(backend: Backend, query: str, args: argparse.Namespace, bar: tqdm) -> t
 
     backend.failures += 1
     error = redact(" ".join(error.split()), args)
-    tqdm.write(f"[!] {backend.name}, '{shorten(query)}': {error}")
+    emit(NOTE, f"[!] {backend.name}, '{shorten(query)}': {error}", source=backend.name, query=query, error=error)
     if stop_using or backend.failures >= args.max_failures:
         why = error if stop_using else f"failures in a row: {backend.failures}"
         backend.off_reason = f"{backend.name} off ({why})"
-        tqdm.write(f"[!] {backend.off_reason}. Moving on without it.")
+        emit(NOTE, f"[!] {backend.off_reason}. Moving on without it.", source=backend.name, off=True)
     return pubs, f"{backend.name} unavailable: {error}"
 
 
-def _ask_direct(direct: Backend, query: str, args: argparse.Namespace, bar: tqdm) -> tuple[list[dict], str | None]:
+def _ask_direct(direct: Backend, query: str, args: argparse.Namespace, bar: Progress) -> tuple[list[dict], str | None]:
     if direct.off_reason:
         return [], direct.off_reason
     if direct.asked:
@@ -160,12 +158,13 @@ def _ask_direct(direct: Backend, query: str, args: argparse.Namespace, bar: tqdm
     return _ask(direct, query, args, bar)
 
 
-def _ask_semantic(semantic: Backend, query: str, args: argparse.Namespace, bar: tqdm) -> tuple[list[dict], str | None]:
+def _ask_semantic(semantic: Backend, query: str, args: argparse.Namespace,
+                  bar: Progress) -> tuple[list[dict], str | None]:
     return ([], semantic.off_reason) if semantic.off_reason else _ask(semantic, query, args, bar)
 
 
 def _ask_apis(query: str, apis: list[Backend], args: argparse.Namespace,
-              bar: tqdm) -> tuple[list[dict], Backend | None, str | None]:
+              bar: Progress) -> tuple[list[dict], Backend | None, str | None]:
     """Try each search API. Returns (results, the API that answered, why none did).
 
     Results from an API that failed partway are kept, because they already cost quota.
@@ -186,7 +185,7 @@ def _ask_apis(query: str, apis: list[Backend], args: argparse.Namespace,
 
 
 def collect_free(query: str, api_pubs: list[dict], reason: str | None, semantic: Backend | None,
-                 direct: Backend | None, args: argparse.Namespace, bar: tqdm) -> list[str]:
+                 direct: Backend | None, args: argparse.Namespace, bar: Progress) -> list[str]:
     """Build a block when no API answered: Semantic Scholar, OpenAlex, then whatever direct search adds.
 
     Semantic Scholar matches strictly, so it goes first, and direct search goes last because its lists can be
@@ -218,7 +217,7 @@ def collect_free(query: str, api_pubs: list[dict], reason: str | None, semantic:
     oa_pubs, oa_error = openalex.search_openalex(query, args)
     if oa_error:
         oa_error = redact(oa_error, args)
-        tqdm.write(f"[!] OpenAlex, '{shorten(query)}': {oa_error}")
+        emit(NOTE, f"[!] OpenAlex, '{shorten(query)}': {oa_error}", source="OpenAlex", query=query, error=oa_error)
         notes.append(f"OpenAlex unavailable: {oa_error}")
     else:
         answered = True
@@ -235,7 +234,7 @@ def collect_free(query: str, api_pubs: list[dict], reason: str | None, semantic:
         if pubs:
             answered = True
             if len(pubs) < limit:
-                tqdm.write(f"[!] {DIRECT_LABEL} returned only {len(pubs)} of up to {limit}; "
+                emit(NOTE, f"[!] {DIRECT_LABEL} returned only {len(pubs)} of up to {limit}; "
                            f"the list may be incomplete: '{shorten(query)}'")
             new = _not_in(pubs, known)
             added = _add_new(lines, resolve_dois(new, args) if new else [])
@@ -253,7 +252,7 @@ def collect_free(query: str, api_pubs: list[dict], reason: str | None, semantic:
 
 
 def collect_scholar_only(query: str, api_pubs: list[dict], reason: str | None, direct: Backend | None,
-                         args: argparse.Namespace, bar: tqdm) -> list[str]:
+                         args: argparse.Namespace, bar: Progress) -> list[str]:
     """Build a block for --source scholar, when no API answered: direct search if it is on, and nothing else."""
     if direct is None:
         return scholar_failure_lines(api_pubs, reason or "no source available", args)
@@ -271,41 +270,41 @@ def _check_serpapi(args: argparse.Namespace, todo: list[str]) -> tuple[int | Non
     try:
         account = serpapi.serpapi_account(args.serpapi_key, args.http_timeout)
     except Exception as exc:
-        print(f"SerpApi rejected the key: {redact(str(exc), args)}", file=sys.stderr)
+        emit(PROBLEM, f"SerpApi rejected the key: {redact(str(exc), args)}")
         return 1, None
     month_left = account.get("total_searches_left")
     rate = account.get("account_rate_limit_per_hour")
     hour_left = rate - (account.get("this_hour_searches") or 0) if rate else None
     per_query = math.ceil(args.pages * RESULTS_PER_PAGE / serpapi.SERPAPI_PAGE_SIZE)
-    print(f"SerpApi: {month_left} searches left this month, {hour_left} this hour; "
+    emit(NOTICE, f"SerpApi: {month_left} searches left this month, {hour_left} this hour; "
           f"one query uses up to {per_query}.")
     known = [x for x in (month_left, hour_left) if x is not None]
     if known and min(known) <= 0:
         if args.source == "scholar":
-            print("SerpApi quota is used up. Wait for it to renew.", file=sys.stderr)
+            emit(PROBLEM, "SerpApi quota is used up. Wait for it to renew.")
             return 1, None
-        print("SerpApi quota is used up.")
+        emit(NOTICE, "SerpApi quota is used up.")
         return None, "SerpApi off (limit reached)"
     if known and min(known) < per_query * len(todo):
-        print(f"The quota covers about {min(known) // per_query} of {len(todo)} queries. The rest use the next "
+        emit(NOTICE, f"The quota covers about {min(known) // per_query} of {len(todo)} queries. The rest use the next "
               "source; collect them again later with --redo-free.")
     return None, None
 
 
 def _check_direct_scholar(args: argparse.Namespace, have_api: bool) -> int | None:
     """Warn and check scholarly and the proxy. Returns an exit code to stop with."""
-    print(scholar.REMINDER if args.direct_warning_shown else scholar.WARNING, file=sys.stderr)
+    emit(PROBLEM, scholar.REMINDER if args.direct_warning_shown else scholar.WARNING)
     try:
         scholar.load_scholarly(args.proxy)
     except ImportError as exc:
         if args.source == "scholar" and not have_api:
-            print(f"scholarly cannot be imported: {exc}\nInstall it with: {scholar.INSTALL_HINT}", file=sys.stderr)
+            emit(PROBLEM, f"scholarly cannot be imported: {exc}\nInstall it with: {scholar.INSTALL_HINT}")
             return 1
-        print(f"scholarly cannot be imported ({exc}), so direct search is skipped.\n"
-              f"To use it, run: {scholar.INSTALL_HINT}", file=sys.stderr)
+        emit(PROBLEM, f"scholarly cannot be imported ({exc}), so direct search is skipped.\n"
+              f"To use it, run: {scholar.INSTALL_HINT}")
         args.direct_scholar = False
     except Exception as exc:
-        print(f"Could not set up scholarly: {type(exc).__name__}: {redact(str(exc), args)}", file=sys.stderr)
+        emit(PROBLEM, f"Could not set up scholarly: {type(exc).__name__}: {redact(str(exc), args)}")
         return 1
     return None
 
@@ -319,10 +318,10 @@ def build_backends(args: argparse.Namespace,
     if args.source == "openalex":
         return apis, None, None, None
     if args.searchapi_key:
-        print("SearchApi: a query with 50 results uses 3 requests from your quota.")
+        emit(NOTICE, "SearchApi: a query with 50 results uses 3 requests from your quota.")
         apis.append(Backend("SearchApi", lambda q, a, on_page: searchapi.search_searchapi(q, a, on_page=on_page)))
     if args.serper_key:
-        print("Serper: a query with 50 results uses 5 queries from your quota.")
+        emit(NOTICE, "Serper: a query with 50 results uses 5 queries from your quota.")
         apis.append(Backend("Serper", lambda q, a, on_page: serper.search_serper(q, a, on_page=on_page)))
     if args.serpapi_key:
         stop, skipped = _check_serpapi(args, todo)
@@ -342,35 +341,33 @@ def build_backends(args: argparse.Namespace,
 
 def run(args: argparse.Namespace) -> int:
     if not args.input.exists():
-        print(f"Query file not found: {args.input}", file=sys.stderr)
+        emit(PROBLEM, f"Query file not found: {args.input}")
         return 1
     try:
         queries = read_queries(args.input)
         doubtful = queries_with_problems(args.input)
     except UnicodeDecodeError:
-        print(f"{args.input} is not saved as UTF-8. Save it as UTF-8 and try again.", file=sys.stderr)
+        emit(PROBLEM, f"{args.input} is not saved as UTF-8. Save it as UTF-8 and try again.")
         return 1
     if not queries:
-        print(f"No queries in {args.input} (separate them with ';')", file=sys.stderr)
+        emit(PROBLEM, f"No queries in {args.input} (separate them with ';')")
         return 1
     if doubtful:
-        print(f"{doubtful} of {counted(len(queries), 'query', 'queries')} may have mistakes. To see them, run: "
-              f"alcedo check -i {args.input}",
-              file=sys.stderr)
+        emit(PROBLEM, f"{doubtful} of {counted(len(queries), 'query', 'queries')} may have mistakes. To see them, run: "
+              f"alcedo check -i {args.input}")
     if args.source == "scholar" and not (args.searchapi_key or args.serper_key or args.serpapi_key
                                          or args.direct_scholar):
-        print("--source scholar needs a search API key (run: alcedo setup) or --direct-scholar.", file=sys.stderr)
+        emit(PROBLEM, "--source scholar needs a search API key (run: alcedo setup) or --direct-scholar.")
         return 2
 
     continuing = args.resume or args.redo_free
     if args.output.exists() and not args.overwrite:
         if not continuing:
-            print(f"{args.output} already exists. Use --resume to continue it or --overwrite to replace it.",
-                  file=sys.stderr)
+            emit(PROBLEM, f"{args.output} already exists. Use --resume to continue it or --overwrite to replace it.")
             return 1
         if not is_results_file(args.output):
-            print(f"{args.output} has no Alcedo results, so continuing would replace it. "
-                  "Choose another file with -o, or use --overwrite.", file=sys.stderr)
+            emit(PROBLEM, f"{args.output} has no Alcedo results, so continuing would replace it. "
+                  "Choose another file with -o, or use --overwrite.")
             return 1
 
     failed_lookups.clear()
@@ -382,14 +379,14 @@ def run(args: argparse.Namespace) -> int:
     if stop is not None:
         return stop
     if not apis and not direct and args.source == "auto" and not skipped:
-        print(NO_SCHOLAR_NOTICE, file=sys.stderr)
+        emit(PROBLEM, NO_SCHOLAR_NOTICE)
     semantic = None
     if args.source == "auto" and args.semantic_scholar:
         semantic = Backend(SEMANTIC_SCHOLAR_LABEL, semantic_scholar.search_semantic_scholar)
 
-    print(f"Queries: {len(queries)}, to collect: {len(todo)}. Source: {source_label(args, apis, semantic, direct)}. "
-          f"Results: {args.output}")
-    bar = tqdm(total=len(queries), initial=len(queries) - len(todo), desc="Queries", unit="query")
+    emit(NOTICE, f"Queries: {len(queries)}, to collect: {len(todo)}. "
+                 f"Source: {source_label(args, apis, semantic, direct)}. Results: {args.output}")
+    bar = Progress(total=len(queries), done=len(queries) - len(todo))
     try:
         for query in todo:
             pubs, answered, reason = _ask_apis(query, apis, args, bar)
@@ -404,10 +401,10 @@ def run(args: argparse.Namespace) -> int:
             # --resume collects a block with an error line again from scratch.
             results[query] = lines
             save_results(args.output, queries, results)
-            bar.update()
+            bar.update(query)
 
             if args.source == "scholar" and all(b.off_reason for b in [*apis, *([direct] if direct else [])]):
-                tqdm.write("[!] No Google Scholar source is left. Use a search API key or try later, "
+                emit(NOTE, "[!] No Google Scholar source is left. Use a search API key or try later, "
                            "then run with --resume.")
                 break
 
@@ -416,7 +413,7 @@ def run(args: argparse.Namespace) -> int:
             bar.set_postfix_str("checking DOIs")
             _, unchecked = verify_results(results, args.http_timeout)
     except KeyboardInterrupt:
-        tqdm.write("Interrupted. Collected results are saved; continue with --resume.")
+        emit(NOTE, "Interrupted. Collected results are saved; continue with --resume.")
         return 130
     finally:
         bar.close()
@@ -432,22 +429,26 @@ def run(args: argparse.Namespace) -> int:
     via_free = sum("OpenAlex" in source or SEMANTIC_SCHOLAR_LABEL in source for source in sources)
     via_direct = sum(DIRECT_LABEL in source for source in sources)
     errors = sum(line.startswith(ERROR_PREFIX) for line in lines)
-    print(f"Done. DOIs: {found}, unique: {unique}, without a DOI: {missing}, queries via free catalogues: {via_free}, "
-          f"queries with errors: {errors}. File: {args.output}")
-    print(f"List without repeats: {combined_path(args.output)}")
+    emit(NOTICE, f"Done. DOIs: {found}, unique: {unique}, without a DOI: {missing}, "
+                 f"queries via free catalogues: {via_free}, queries with errors: {errors}. File: {args.output}")
+    emit(NOTICE, f"List without repeats: {combined_path(args.output)}")
     if direct and direct.failures:
-        print(scholar.REFUSED)
+        emit(NOTICE, scholar.REFUSED)
     if via_direct:
-        print(f"{counted(via_direct, 'query', 'queries')} used direct Google Scholar search, so the lists may be "
-              "incomplete. "
-              "With a search API key, collect them again using --redo-free.")
+        emit(NOTICE, f"{counted(via_direct, 'query', 'queries')} used direct Google Scholar search, "
+                     "so the lists may be incomplete. "
+                     "With a search API key, collect them again using --redo-free.")
     if not_registered:
-        print(f"Marked '{NOT_REGISTERED}': {counted(not_registered, 'result line')}. doi.org does not know them.")
+        emit(NOTICE, f"Marked '{NOT_REGISTERED}': {counted(not_registered, 'result line')}. "
+                     "doi.org does not know them.")
     if unchecked:
-        print(f"Could not check {counted(unchecked, 'DOI')} in doi.org. They stay in the results; "
+        emit(NOTICE, f"Could not check {counted(unchecked, 'DOI')} in doi.org. They stay in the results; "
               "run again to check them.")
     if failed_lookups:
         details = ", ".join(f"{service}: {count}" for service, count in failed_lookups.most_common())
-        print(f"Failed DOI lookups ({details}). Some records marked '{NOT_FOUND}' may have a DOI; "
+        emit(NOTICE, f"Failed DOI lookups ({details}). Some records marked '{NOT_FOUND}' may have a DOI; "
               "run again later to retry them.")
+    emit(FINISHED, output=str(args.output), combined=str(combined_path(args.output)), queries=len(queries),
+         dois=found, unique=unique, without_doi=missing, via_free=via_free, via_direct=via_direct, errors=errors,
+         not_registered=not_registered, unchecked=unchecked, failed_lookups=dict(failed_lookups))
     return 0

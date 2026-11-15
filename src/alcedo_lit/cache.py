@@ -12,6 +12,8 @@ import sys
 import time
 from pathlib import Path
 
+from .events import PROBLEM, emit
+
 DAY = 86400
 MISS = object()  # a stored None means "looked this up, and there is nothing"
 
@@ -44,7 +46,7 @@ class Cache:
             self._turn_off(exc)
 
     def _turn_off(self, exc: Exception) -> None:
-        print(f"Working without a cache: {self.path}: {exc}", file=sys.stderr)
+        emit(PROBLEM, f"Working without a cache: {self.path}: {exc}")
         self.db = None
 
     def get(self, kind: str, key: str, max_age_days: float):

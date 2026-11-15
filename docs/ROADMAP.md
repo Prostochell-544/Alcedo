@@ -47,8 +47,8 @@ relevant results in our test, and free sources stay available for people who can
   data from 203 to 94.
 - Done: links to legal open-access copies through OpenAlex, in the lists and the exports, and a `no_access.csv`
   of papers with no open copy, for interlibrary loan or asking the authors (idea: paper-qa).
-- Preparation for the interface in 0.4: the search reports its progress and problems as events, separate from what
-  the command line prints. Nothing changes for people who use the command line.
+- Done: preparation for the interface in 0.4. The search reports its progress and problems as events, separate from
+  what the command line prints. Nothing changes for people who use the command line.
 
 ## 0.4: a local interface
 

@@ -252,6 +252,17 @@ python -m pytest
 ruff check .
 ```
 
+To use the search from another program, listen to its events instead of reading the terminal:
+
+```python
+from alcedo_lit import events
+from alcedo_lit.cli import parse_args
+from alcedo_lit.pipeline import run
+
+with events.listening(print):  # each event has a kind, a text and data
+    run(parse_args(["-i", "queries.txt"]))
+```
+
 The tests use no network. Git tracks the sample in the project root, so do not run your own queries there:
 `queries.txt`, `alcedo_results.txt` and `alcedo_results_unique.csv` would show up as changes. Use `private/`, which
 Git ignores, so your topic stays out of the repository.

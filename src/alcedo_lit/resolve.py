@@ -24,6 +24,7 @@ from .doi import (
     extract_doi,
     normalize_title,
 )
+from .events import NOTE, emit, on_terminal
 from .net import SESSION, api_headers
 from .results import NOT_FOUND
 from .sources.openalex import OPENALEX_TYPES, OPENALEX_URL
@@ -190,12 +191,12 @@ def resolve_dois(pubs: list[dict], args: argparse.Namespace, source: str = "Goog
     if not pubs:
         return [f"{NOT_FOUND} ({source} returned nothing)"]
     lines, seen = [], set()
-    for pub in tqdm(pubs, desc="  resolving DOIs", unit="paper", leave=False):
+    for pub in tqdm(pubs, desc="  resolving DOIs", unit="paper", leave=False, disable=not on_terminal()):
         title = pub.get("title") or "untitled"
         try:
             doi = _find_doi_cached(pub, args)
         except Exception as exc:  # one odd record must not take down the whole run, but it must show
-            tqdm.write(f"[!] Could not process '{title[:60]}': {type(exc).__name__}: {exc}")
+            emit(NOTE, f"[!] Could not process '{title[:60]}': {type(exc).__name__}: {exc}")
             doi = None
         if not doi:
             lines.append(f"{NOT_FOUND}: {title}")

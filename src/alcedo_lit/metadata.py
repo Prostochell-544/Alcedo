@@ -12,6 +12,7 @@ import requests
 from tqdm import tqdm
 
 from .cache import MISS, Cache
+from .events import on_terminal
 from .net import SESSION, api_headers
 from .resolve import CROSSREF_URL
 from .sources.openalex import OPENALEX_URL
@@ -141,7 +142,7 @@ def fetch_metadata(dois: list[str], args: argparse.Namespace, cache: Cache | Non
     answered: dict[str, dict] = {}
     openalex_failed: set[str] = set()
     batches = [batchable[i:i + BATCH_SIZE] for i in range(0, len(batchable), BATCH_SIZE)]
-    for batch in tqdm(batches, desc="  fetching metadata", unit="batch", leave=False):
+    for batch in tqdm(batches, desc="  fetching metadata", unit="batch", leave=False, disable=not on_terminal()):
         found = _openalex_batch(batch, args)
         if found is None:
             openalex_failed.update(batch)
