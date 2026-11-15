@@ -36,7 +36,7 @@ relevant results in our test, and free sources stay available for people who can
 - Export to BibTeX and RIS, so that Zotero and ASReview can read the results. Authors are written family name
   first, so Zotero splits them.
 
-## 0.3: a review you can report in a paper
+## 0.3: a review you can report in a paper (released)
 
 - Done: a selection log with counts at every stage, in the style of PRISMA: records found by each source,
   duplicates removed, records excluded and why, and records with unknown data.

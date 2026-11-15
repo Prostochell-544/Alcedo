@@ -30,8 +30,9 @@ Documentation in other languages: [Russian](https://github.com/Prostochell-544/A
 - Saves after every query. `--resume` continues after an interruption and collects failed queries again.
 - Writes a second file listing each DOI once, with the queries that found it. Papers found by the most queries come first.
 - With `--verify-dois`, checks every DOI in the doi.org registry and marks the ones that do not exist.
-- `alcedo filter` narrows the results by year, language, quartile and words, and explains every record it leaves out.
-  See [Filter the results](#filter-the-results).
+- `alcedo filter` narrows the results by year, language, record type, quartile and words, and explains every record
+  it leaves out. It also removes repeats of the same work, links legal open copies, and writes a selection log with
+  the numbers for a PRISMA 2020 flow diagram. See [Filter the results](#filter-the-results).
 - `alcedo export` writes RIS and BibTeX for reference managers. See
   [Export to a reference manager](#export-to-a-reference-manager).
 

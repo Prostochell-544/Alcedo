@@ -1,22 +1,31 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-11-15
 
-- For developers: the search reports its progress, problems and final counts as events, which another program, such
-  as the interface planned for 0.4, can listen to. The command line prints exactly what it printed before.
-- `alcedo filter` writes a selection log, `alcedo_selection_log.md`: records found by each source, duplicates
-  removed, records excluded and why, records to check by hand, and access to the kept papers. Its last section gives
-  the numbers for the identification part of a PRISMA 2020 flow diagram.
-- The lists from `alcedo filter` show whether each paper has a legal open copy, and where, from OpenAlex. Kept papers
-  with no open copy go to `alcedo_no_access.csv`, for interlibrary loan or to ask the authors. The exports link the
-  open copy and say which version it is, because an accepted manuscript can differ from the published paper.
-- `alcedo filter --type article,review` keeps only these record types. Others include preprint, book-chapter,
-  dissertation and conference-paper. In a 1,426-record run it cut the records with unknown data from 203 to 94,
-  because most of them were dissertations, preprints and book chapters, which have no journal quartile.
+A review you can report in a paper: repeats removed, the selection counted at every step, and the open copies found.
+
 - `alcedo filter` finds the same work under different DOIs: a preprint and the article it became, or two editions
   of one paper. It keeps the published version, adds the queries that found the repeat, and lists the repeats in
   `alcedo_duplicates.csv`. Titles that are close but not the same are only marked, in a `similar_to` column, for you
-  to check. In a 1,426-record run this found 11 repeats and 8 close titles.
+  to check. In a 1,426-record run this found about ten repeats and eight close titles.
+- `alcedo filter --type article,review` keeps only these record types. Others include preprint, book-chapter,
+  dissertation and conference-paper. In the same run it cut the records with unknown data by more than half, because
+  most of them were dissertations, preprints and book chapters, which have no journal quartile.
+- The lists from `alcedo filter` show whether each paper has a legal open copy, and where, from OpenAlex. Kept papers
+  with no open copy go to `alcedo_no_access.csv`, for interlibrary loan or to ask the authors. The exports link the
+  open copy and say which version it is, because an accepted manuscript can differ from the published paper.
+- `alcedo filter` writes a selection log, `alcedo_selection_log.md`: records found by each source, duplicates
+  removed, records excluded and why, records to check by hand, and access to the kept papers. Its last section gives
+  the numbers for the identification part of a PRISMA 2020 flow diagram.
+- For developers: the search reports its progress, problems and final counts as events, which another program, such
+  as the interface planned for 0.4, can listen to. The command line prints exactly what it printed before.
+
+Known limits:
+
+- Repeats are found only by exactly the same title. Close titles are marked for you to decide.
+- Open access data comes from OpenAlex only. Records that only Crossref knows have none.
+- The selection log covers what Alcedo does. Screening titles, abstracts and full texts is yours to record.
+- The first `alcedo filter` after updating fetches paper data again, because the records gained open access fields.
 
 ## 0.2.0 - 2026-11-04
 
