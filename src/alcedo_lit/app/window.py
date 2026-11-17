@@ -12,6 +12,7 @@ from PySide6.QtCore import QPoint, QProcess, QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices, QFont, QIcon, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QCheckBox,
     QFileDialog,
     QGridLayout,
@@ -657,6 +658,20 @@ class MainWindow(QMainWindow):
     def has_any_key_or_choice() -> bool:
         config = load_config()
         return any(config.get(k) for k in ("searchapi_key", "serper_key", "serpapi_key")) or "direct_scholar" in config
+
+    def closeEvent(self, event) -> None:  # the name Qt calls
+        """Stop the work before the window goes: a thread still running when Alcedo quits would crash it."""
+        if self.job and self.job.isRunning():
+            answer = QMessageBox.question(self, "Alcedo", "Alcedo is still working. Stop and close? Results are "
+                                                          "saved after every query, so you can continue later.")
+            if answer != QMessageBox.StandardButton.Yes:
+                event.ignore()
+                return
+            self.job.stop()  # takes effect at the next step of the work, after the current request
+            self.statusBar().showMessage("Stopping…")
+            while not self.job.wait(100):
+                QApplication.processEvents()
+        event.accept()
 
     def busy(self) -> bool:
         if self.job and self.job.isRunning():

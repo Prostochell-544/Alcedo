@@ -1,14 +1,16 @@
 """The desktop application, without a display. Skipped when Qt for Python is not installed."""
 
+import gc
 import html
 import os
+import time
 
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 QtWidgets = pytest.importorskip("PySide6.QtWidgets")
 
-from PySide6.QtCore import QEventLoop, QTimer  # noqa: E402
+from PySide6.QtCore import QEvent, QEventLoop, QTimer  # noqa: E402
 
 from alcedo_lit import config, events  # noqa: E402
 from alcedo_lit.app import __main__ as app_main  # noqa: E402
@@ -23,10 +25,19 @@ from alcedo_lit.app.window import (  # noqa: E402
 )
 from alcedo_lit.events import NOTE, NOTICE, PROBLEM, STARTED, STATUS, STEP, Event  # noqa: E402
 
+# One application for the whole run, never deleted by a fixture: if Qt went away before the windows the tests left
+# behind, Python would crash while freeing them at exit, after every test had passed.
+APP = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
-@pytest.fixture(scope="module")
+
+@pytest.fixture
 def app():
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    yield APP
+    for widget in APP.topLevelWidgets():
+        widget.close()
+        widget.deleteLater()
+    gc.collect()
+    APP.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
 
 def wait_for(job, timeout=5000):
@@ -35,6 +46,7 @@ def wait_for(job, timeout=5000):
     QTimer.singleShot(timeout, loop.quit)
     job.start()
     loop.exec()
+    job.wait(timeout)  # the signal comes just before the thread ends
 
 
 def test_queries_are_checked_and_errors_block_the_start(app, tmp_path):
@@ -199,6 +211,22 @@ def test_an_error_in_the_work_is_reported_not_raised(app):
     app.processEvents()
     assert codes == [1]
     assert "ZeroDivisionError" in seen[0].text
+
+
+def test_closing_during_work_stops_it_first(app, monkeypatch):
+    def work():
+        while True:
+            events.emit(STATUS, "working")
+            time.sleep(0.01)
+
+    main_window = MainWindow()
+    monkeypatch.setattr(QtWidgets.QMessageBox, "question", lambda *args: QtWidgets.QMessageBox.StandardButton.Yes)
+    codes = []
+    main_window.launch(work, lambda event: None, codes.append)
+    assert main_window.close()
+    assert not main_window.job.isRunning()
+    app.processEvents()
+    assert codes == [130]
 
 
 def test_the_window_opens_on_sources_until_something_is_chosen(app):
