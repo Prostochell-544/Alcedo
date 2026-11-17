@@ -50,21 +50,25 @@ relevant results in our test, and free sources stay available for people who can
 - Done: preparation for the interface in 0.4. The search reports its progress and problems as events, separate from
   what the command line prints. Nothing changes for people who use the command line.
 
-## 0.4: a local interface
+## 0.4: a desktop application
 
-- `alcedo ui` opens a page in the browser on your own computer. Keys and queries stay there: no hosted service.
-- The same steps as the command line, in one window: keys, queries checked as you type, a search with progress and
-  the warnings about each source, a results table with the filters and the reasons for each decision, and export.
-- Everything the interface does, the command line does too. The interface has no logic of its own.
-- An optional extra, `pip install "alcedo-lit[ui]"`, so that the command line stays light.
-- An application icon made from the logo.
+- Done: `alcedo app` opens a window on your own computer, made with Qt for Python (PySide6). Keys, queries
+  and results stay on this computer: no hosted service and no browser.
+- The same steps as the command line, in one window: sources and keys, queries checked as you type, a search with
+  progress and the warnings about each source, a results table with the filters and the reasons for each decision,
+  and export for Zotero.
+- Everything the window does, the command line does too. The window has no logic of its own: it calls the same
+  functions.
+- An optional extra, `pip install "alcedo-lit[app]"`, so that the command line stays light.
+- Done: a Windows program for people without Python, built with PyInstaller in GitHub Actions and attached to each
+  release. Direct Google Scholar search stays in the Python version.
+- Done: an application icon made from the logo.
 
 ## Later
 
 - Citation snowballing (idea: findpapers).
 - Batch import of a filtered list straight into a Zotero library.
 - Russian and Ukrainian interface.
-- A desktop app for people without Python, built from the local interface.
 - A query parser that translates one syntax for each source (idea: findpapers).
 - `--scope`: search titles and abstracts only, to reduce topic drift (idea: findpapers).
 - Retries with backoff and per-source rate limits (idea: findpapers, pyalex).

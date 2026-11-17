@@ -117,6 +117,10 @@ def main(argv: list[str] | None = None) -> int:
         return run_filter(argv[1:])
     if argv[:1] == ["export"]:
         return run_export(argv[1:])
+    if argv[:1] == ["app"]:
+        from .app.__main__ import main as run_app
+
+        return run_app()
     args = parse_args(argv)
     decide_direct_search(args)
     return run(args)

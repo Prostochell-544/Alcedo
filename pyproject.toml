@@ -41,6 +41,10 @@ scholar = [
     "bibtexparser<2",
     "httpx<0.28",
 ]
+# The desktop application. Qt for Python is licensed under the LGPL.
+app = [
+    "PySide6-Essentials>=6.7",
+]
 dev = [
     "pytest>=8",
     "ruff>=0.6",
@@ -49,11 +53,17 @@ dev = [
 [project.scripts]
 alcedo = "alcedo_lit.cli:main"
 
+[project.gui-scripts]
+alcedo-app = "alcedo_lit.app.__main__:main"
+
 [tool.setuptools.dynamic]
 version = { attr = "alcedo_lit.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"alcedo_lit.app" = ["assets/*.png"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

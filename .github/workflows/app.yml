@@ -1,0 +1,54 @@
+name: Windows program
+
+# Builds the folder with Alcedo.exe and zips it. On a published release the zip is attached to the release;
+# started by hand from the Actions tab, it is kept as a download of the run for a week.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ".[app,dev]" "pyinstaller>=6.11"
+      - run: python -m pytest tests/test_app.py
+      - run: pyinstaller packaging/alcedo.spec --noconfirm
+      - name: Check that the program starts
+        shell: pwsh
+        run: |
+          $program = Start-Process dist/Alcedo/Alcedo.exe -ArgumentList "--self-check" -PassThru
+          if (-not $program.WaitForExit(120000)) { $program.Kill(); throw "Alcedo.exe did not finish its check" }
+          if ($program.ExitCode -ne 0) { throw "Alcedo.exe failed its check with code $($program.ExitCode)" }
+      - name: Zip the program
+        shell: pwsh
+        run: |
+          $version = python -c "import alcedo_lit; print(alcedo_lit.__version__)"
+          Compress-Archive -Path dist/Alcedo -DestinationPath "Alcedo-$version-windows.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Alcedo-windows
+          path: Alcedo-*-windows.zip
+          retention-days: 7
+
+  attach:
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Alcedo-windows
+      - run: gh release upload "$TAG" Alcedo-*-windows.zip --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
