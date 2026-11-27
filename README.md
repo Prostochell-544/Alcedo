@@ -35,10 +35,13 @@ Documentation in other languages: [Russian](https://github.com/Prostochell-544/A
   the numbers for a PRISMA 2020 flow diagram. See [Filter the results](#filter-the-results).
 - `alcedo export` writes RIS and BibTeX for reference managers. See
   [Export to a reference manager](#export-to-a-reference-manager).
+- A desktop window does the same steps without the command line. On Windows it comes as a program that needs no
+  Python. See [Desktop window](#desktop-window).
 
 ## Install
 
-Requires Python 3.10 or newer.
+Requires Python 3.10 or newer. On Windows without Python, use the program described in
+[Desktop window](#desktop-window).
 
 ```bash
 pip install alcedo-lit
@@ -52,6 +55,26 @@ Then choose how to search. This explains the options and saves your key, which i
 ```bash
 alcedo setup
 ```
+
+## Desktop window
+
+The window has four steps: sources and keys, your queries checked as you type, the search with its progress, and the
+results with the filters and export. A question mark next to a field explains it.
+
+**Windows, without Python.** Download `Alcedo-<version>-windows.zip` from the
+[latest release](https://github.com/Prostochell-544/Alcedo/releases/latest), unzip it and run `Alcedo\Alcedo.exe`.
+Keep the `_internal` folder next to it. The program is not signed, so Windows may say "Windows protected your PC":
+choose More info, then Run anyway. It does not include direct Google Scholar search; search APIs and the free sources
+work as usual.
+
+**Any system, with Python:**
+
+```bash
+pip install "alcedo-lit[app]"
+alcedo app
+```
+
+The window, the program and the command line share one settings file, so a key saved in one is used by the others.
 
 ## Quick start
 
@@ -267,6 +290,15 @@ with events.listening(print):  # each event has a kind, a text and data
 The tests use no network. Git tracks the sample in the project root, so do not run your own queries there:
 `queries.txt`, `alcedo_results.txt` and `alcedo_results_unique.csv` would show up as changes. Use `private/`, which
 Git ignores, so your topic stays out of the repository.
+
+To build the Windows program yourself, on Windows:
+
+```bash
+pip install ".[app]" pyinstaller
+pyinstaller packaging/alcedo.spec --noconfirm
+```
+
+The program appears in `dist/Alcedo`. `Alcedo.exe --self-check` starts it without a window and returns 0 if it works.
 
 ## License
 

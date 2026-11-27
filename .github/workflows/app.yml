@@ -14,8 +14,8 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: python -m pip install ".[app,dev]" "pyinstaller>=6.11"
@@ -32,7 +32,7 @@ jobs:
         run: |
           $version = python -c "import alcedo_lit; print(alcedo_lit.__version__)"
           Compress-Archive -Path dist/Alcedo -DestinationPath "Alcedo-$version-windows.zip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: Alcedo-windows
           path: Alcedo-*-windows.zip
@@ -45,7 +45,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: Alcedo-windows
       - run: gh release upload "$TAG" Alcedo-*-windows.zip --repo "$GITHUB_REPOSITORY"

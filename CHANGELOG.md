@@ -2,13 +2,19 @@
 
 ## Unreleased
 
+## 0.4.0 - 2026-11-27
+
+A desktop window for the whole review, and a Windows program that needs no Python.
+
 - `alcedo app` opens a desktop window with the same steps as the command line: sources and keys, queries checked as
   you type, the search with its progress, and the filtered lists with export. It needs
-  `pip install "alcedo-lit[app]"`, which adds Qt for Python. This first version is for feedback on the layout.
+  `pip install "alcedo-lit[app]"`, which adds Qt for Python. The window follows the light or dark theme of the system,
+  and explanations are behind question marks. If you close it during a search, it stops the search first.
 - A Windows program for people without Python: each release gets `Alcedo-<version>-windows.zip`, a folder with
   `Alcedo.exe`, built by GitHub Actions. It does not include direct Google Scholar search, which stays in the Python
   version; search APIs and the free sources work as usual. Settings are shared with the Python version.
 - The window shows where the settings file is, with a link that opens its folder.
+- The interface is in English for now.
 
 ## 0.3.0 - 2026-11-15
 
